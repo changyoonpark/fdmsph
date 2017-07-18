@@ -1,0 +1,1 @@
+/usr/local/bin/g++-7    -fopenmp -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/FDMSPH.dir/main.cpp.o CMakeFiles/FDMSPH.dir/sphsolver.cpp.o CMakeFiles/FDMSPH.dir/particleAttrib.cpp.o  -o ../../bin/FDMSPH  ../../lib/libCompactNSearch.a /usr/local/hdf5/lib/libH5Part.a /usr/local/hdf5/lib/libhdf5.dylib 

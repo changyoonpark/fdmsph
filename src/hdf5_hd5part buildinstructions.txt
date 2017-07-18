@@ -1,0 +1,84 @@
+scp folder to remote :
+
+1.
+tar -czvf fdmsph.tar.gz ./fdmsph
+
+2.
+scp -i "./FDMSPH/sph.pem" fdmsph.tar.gz ubuntu@ec2-54-183-152-159.us-west-1.compute.amazonaws.com:~/sph
+
+3. in the directory : 
+tar -xvzf fdmsph.tar.gz
+
+----------------------------------------------------------------------------------------------
+HDF5 / H5Part Build instructions (single core): 
+
+-- Recommend that you install GCC7 for compilation. The linker somehow wasn't able to properly load 
+H5Part Libraries with gcc-5
+
+1. download and build the stuff
+
+wget https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar
+tar -xvf hdf5-1.8.19.tar
+cd hdf5-1.8.19
+./configure --prefix=/usr/local/hdf5
+sudo make
+sudo make install
+
+2. download hd5part. 
+
+https://codeforge.lbl.gov/frs/?group_id=22&release_id=344#h5part-h5part-1.6.6-title-content
+
+sudo apt-get install zlib1g-dev
+./configure --prefix=/usr/local/hdf5
+sudo make && sudo make install 
+
+3. should be good to go.
+
+-I/usr/local/hdf5/include -L/usr/local/hdf5/lib -I/usr/local/eigen -lH5Part -lhdf5 -lz -lsz
+
+**
+in UBUNTU, the default directory should be
+--prefix=/home/ubuntu/hdf5-1.8.19
+
+
+---------------------------------------------------------------------------------------------
+Compile with Eigen 
+
+Goto 
+/usr/local 
+
+sudo apt-get install mercurial && hg clone https://bitbucket.org/eigen/eigen/
+
+1. In the compiler option, specify -I/usr/local/eigen
+
+Program Build Instructions :
+
+1. mkdir build
+2. cmake ..
+3. ccmake .
+4. set C_COMPILER and CXX_COMPILER to gcc.
+5. set CMAKE_CXX_FLAGS : -I/usr/local/hdf5/include -DPARALLEL_IO -DH5_HAVE_PARALLEL -L/usr/local/hdf5/lib -lH5Part -lhdf5 -lz -lsz
+ OR FOR SERIAL
+ -I/usr/local/hdf5/include -L/usr/local/hdf5/lib -lH5Part -lhdf5 
+6. should be able to make at this point.
+
+
+
+
+--------------------------------------------------------------
+
+Building it into your program (directly from hd5part webpage) :
+
+			There are many different subtleties to linking on various computer platforms, but typically one does the following.
+
+			C/C++ Serial: 
+
+			#include < H5Part.h > into your source file. 
+			include path : /usr/local/hdf5/include
+			lib path : /usr/local/hdf5/lib
+			$CC -Ipath_to_H5Part.h -Ipath_to_hdf5.h -o outfile MyFile.cc -Lpath_to_libH5Part.a -lH5Part -Lpath_to_libhdf5 -lhdf5 -lz -lsz
+
+			C/C++ Parallel: 
+
+			#include < H5Part.h > into your source file. 
+			$MPICC -Ipath_to_H5Part.h -Ipath_to_hdf5.h -DPARALLEL_IO -DH5_HAVE_PARALLEL -o outfile MyFile.cc -Lpath_to_libH5Part.a -lH5Part -Lpath_to_libhdf5 -lhdf5 -lz -lsz

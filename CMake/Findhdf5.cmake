@@ -1,0 +1,12 @@
+FIND_LIBRARY(HDF5_LIBRARY NAMES HDF5 HINTS "/usr/local/hdf5/lib")
+
+FIND_PATH(HDF5_INCLUDE_PATH NAMES HDF5.h HINTS "/usr/local/hdf5/include")
+
+# Need to provide the *_LIBRARIES
+SET(HDF5_LIBRARIES ${HDF5_LIBRARY})
+
+# handle the QUIETLY and REQUIRED arguments and set HDF5_FOUND to TRUE if 
+# all listed variables are TRUE
+INCLUDE(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(HDF5 DEFAULT_MSG HDF5_LIBRARY HDF5_INCLUDE_PATH)
+

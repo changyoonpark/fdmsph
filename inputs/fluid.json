@@ -1,0 +1,14 @@
+{
+	"type" : "Fluid",
+	"rho0" : 1000.0,	
+	"T0" : 100.0,
+	"mu" : 0.001,
+	"soundSpeed" : 20.0,
+	"specificHeat" : 4000.0,
+	"thermalConductivity" : 0.6,
+	"thermalExpansion" : 0,
+	"geometry" : {
+			"type" : "pointCloud",
+			"file" : "../inputs/droplet_dx_0.00005.h5part" 
+			}
+}
