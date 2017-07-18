@@ -20,14 +20,13 @@ H5Part Libraries with gcc-5
 wget https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar
 tar -xvf hdf5-1.8.19.tar
 cd hdf5-1.8.19
-./configure --prefix=/usr/local/hdf5
-sudo make
-sudo make install
+sudo apt-get install make
+./configure --prefix=/usr/local/hdf5 && sudo make && sudo make install
 
 2. download hd5part. 
 
-https://codeforge.lbl.gov/frs/?group_id=22&release_id=344#h5part-h5part-1.6.6-title-content
-
+wget https://codeforge.lbl.gov/frs/download.php/file/387/H5Part-1.6.6.tar.gz
+tar -xvzf H5Part-1.6.6.tar.gz
 sudo apt-get install zlib1g-dev
 ./configure --prefix=/usr/local/hdf5
 sudo make && sudo make install 

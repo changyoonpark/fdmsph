@@ -19,5 +19,6 @@ include_directories ( "${H5PART_INCLUDE_PATH}" )
 target_link_libraries(FDMSPH "${H5PART_LIBRARIES}")
 
 find_package(hdf5 REQUIRED)
+message(${HDF5_INCLUDE_PATH})
 include_directories ( "${HDF5_INCLUDE_PATH}" )
 target_link_libraries(FDMSPH "${HDF5_LIBRARIES}")
