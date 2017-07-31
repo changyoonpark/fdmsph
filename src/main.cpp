@@ -23,23 +23,25 @@ int main ( void ){
 	readJSON(boundaryDataInput, "../inputs/boundary.json");
 
 	if( simDataInput["operation"] == "SPHSimulation" ){
-		
+
 		pData["fluid"] = new ParticleAttributes(simDataInput, fluidDataInput);
-		pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
+		// pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
 
 
 		FileWriter writer(simDataInput["outputFile"].dump());
 
 		SPHSolver solver(simDataInput, pData);
 			for(int t=0;t<(Uint)simDataInput["steps"];t++){
+
+				if (t % (Uint)simDataInput["outper"] == 0)
+					writer.write(pData,simDataInput["smoothingLength"]);
+
+				if (t % (Uint)simDataInput["newfileper"] == ((Uint)simDataInput["newfileper"] - 1))
+					writer.openNextFile();
+
 				solver.neighborSearch();
 				solver.marchTime(t);
 
-				if (t % (Uint)simDataInput["outper"] == 0)
-					writer.write(pData);
-				
-				if (t % (Uint)simDataInput["newfileper"] == 0)
-					writer.openNextFile();
 
 				std::cout << "End of timestep : " << t << std::endl;
 			}
@@ -83,5 +85,3 @@ int main ( void ){
 	return 0;
 
 }
-
-

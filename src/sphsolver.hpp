@@ -6,21 +6,22 @@
 #include <CompactNSearch>
 #include <chrono>
 #include <Eigen/Dense>
+#include <Eigen/Eigenvalues>
 #include "json.hpp"
 #include "helpers.hpp"
 #include "particleAttrib.hpp"
 
 using namespace RealOps;
 using json = nlohmann::json;
-using Uint = unsigned int; 
+using Uint = unsigned int;
 // <Uint,Uint> : First Uint is the set number, Second Uint is the particel number
 
 
 class SPHSolver{
 public:
 	const json& simData;
-	
-	std::map<std::string,ParticleAttributes*>& pData;	
+
+	std::map<std::string,ParticleAttributes*>& pData;
 	std::vector<std::string> setNames;
 	NeighborhoodSearch* nsearch;
 
@@ -35,7 +36,7 @@ public:
 	void setKernels();
 	void setEOS();
 	void setThermalConductivityModel();
-	void setHeatEquationDiscretization();	
+	void setHeatEquationDiscretization();
 	void setTemperatureEnthalpyRelation();
 	void setViscosityConstantFormulation();
 	void setViscosityFormulation();
@@ -52,11 +53,11 @@ public:
 private:
 	void computeInteractions();
 
-	std::function<Real(std::string type, Real T)> thermalConductivity;	
-	
-	std::function<Real(Real3x3 L2_i, Real3 gradT_i, 
-					   Real Ti, Real Tj, Real mj, Real rho_i, Real rho_j, Real ki, Real kj, 
-					   Real3 relpos, Real3 reldir, 
+	std::function<Real(std::string type, Real T)> thermalConductivity;
+
+	std::function<Real(Real3x3 L2_i, Real3 gradT_i,
+					   Real Ti, Real Tj, Real mj, Real rho_i, Real rho_j, Real ki, Real kj,
+					   Real3 relpos, Real3 reldir,
 					   Real dist, Real3 gWij, Real vol_j)> heatTransfer;
 
 	std::function<Real(Real)>														TvsH;

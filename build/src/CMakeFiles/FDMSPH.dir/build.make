@@ -143,8 +143,8 @@ FDMSPH_EXTERNAL_OBJECTS =
 ../bin/FDMSPH: src/CMakeFiles/FDMSPH.dir/particleAttrib.cpp.o
 ../bin/FDMSPH: src/CMakeFiles/FDMSPH.dir/build.make
 ../bin/FDMSPH: ../lib/libCompactNSearch.a
-../bin/FDMSPH: /usr/local/hdf5/lib/libH5Part.a
 ../bin/FDMSPH: /usr/local/hdf5/lib/libhdf5.dylib
+../bin/FDMSPH: /usr/local/hdf5/lib/libH5Part.a
 ../bin/FDMSPH: src/CMakeFiles/FDMSPH.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/chang/Desktop/ResearchCodes/FDMSPH/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable ../../bin/FDMSPH"
 	cd /Users/chang/Desktop/ResearchCodes/FDMSPH/build/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/FDMSPH.dir/link.txt --verbose=$(VERBOSE)

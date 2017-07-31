@@ -8,7 +8,7 @@ using std::ofstream;
 
 
 ParticleAttributes::ParticleAttributes(const json& _simDataIn, const json& _parDataIn)
- : simDataIn(_simDataIn), parDataIn(_parDataIn) 
+ : simDataIn(_simDataIn), parDataIn(_parDataIn)
 {
 	initParticles();
 }
@@ -20,7 +20,7 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 	H5PartFile *fileReader = H5PartOpenFile(fileName.c_str(),H5PART_READ);
 	H5PartSetStep(fileReader,0);
 	Uint nparticles = H5PartGetNumParticles(fileReader);
-	Uint nsteps     = H5PartGetNumSteps(fileReader); 
+	Uint nsteps     = H5PartGetNumSteps(fileReader);
 	std::cout << "... input file (.h5part) has " << nsteps << " timesteps with " << nparticles << " particles." << std::endl;
 
 	std::vector<Real> x,y,z;
@@ -35,21 +35,25 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 	const Real3 zeroVector{0,0,0};
 	const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 	int n = 0;
+	numParticles = 0;
 	for(int i=0;i<x.size();i++){
 
 		Real3 posToAdd{x[i],y[i],z[i]};
 		mass.push_back(0);
-		vol.push_back(0);					    
+		vol.push_back(0);
 		pos.push_back(posToAdd);
-		vel.push_back(zeroVector);
-		acc.push_back(zeroVector);			
+		vel.push_back(getv0());
+		acc.push_back(zeroVector);
 		dens.push_back(getRho0());
 		densdot.push_back(0);
 		densGrad.push_back(zeroVector);
 		tempGrad.push_back(zeroVector);
+    normalVec.push_back(zeroVector);
 
-		// temp.push_back(getT0());
-		temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
+		temp.push_back(getT0());
+    isFS.push_back(0);
+    curvature.push_back(0);
+		// temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
 
 		L.push_back(zeromat);
 		L2.push_back(zeromat);
@@ -60,7 +64,7 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 		force.push_back(zeroVector);
 		isSensor.push_back(false);
 		heatSensed.push_back(0);
-		forceSensed.push_back(zeroVector);					
+		forceSensed.push_back(zeroVector);
 		numParticles+=1;
 		n+=1;
 	}
@@ -123,16 +127,20 @@ void ParticleAttributes::boundaryInit(){
 					    (posToAdd[2] > z0 + wallt + offset * dx || posToAdd[2] < z1 - wallt - offset * dx) ) continue;
 
 					mass.push_back(0);
-					vol.push_back(0);					    
+					vol.push_back(0);
 					pos.push_back(posToAdd);
 					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);			
+					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
 					densdot.push_back(0);
 					densGrad.push_back(zeroVector);
 					tempGrad.push_back(zeroVector);
+          normalVec.push_back(zeroVector);
+
+          isFS.push_back(0);
+          curvature.push_back(0);
 					L.push_back(zeromat);
-					L2.push_back(zeromat);					
+					L2.push_back(zeromat);
 					temp.push_back(T0);
 					enthalpy.push_back(0);
 					enthalpydot.push_back(0);
@@ -140,13 +148,13 @@ void ParticleAttributes::boundaryInit(){
 					force.push_back(zeroVector);
 					isSensor.push_back(false);
 					heatSensed.push_back(0);
-					forceSensed.push_back(zeroVector);					
+					forceSensed.push_back(zeroVector);
 					numParticles+=1;
 					n+=1;
 
 				}}}
-				
-			} 
+
+			}
 			else if (simDataIn["dimensions"] == 2){
 
 				for (int i = offset; i <= (int)((x1 - x0)/dx) - offset; i ++ ){
@@ -161,23 +169,27 @@ void ParticleAttributes::boundaryInit(){
 
 					mass.push_back(0);
 					vol.push_back(0);
-					pos.push_back(posToAdd); 
+					pos.push_back(posToAdd);
 					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);			
+					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
 					densdot.push_back(0);
 					densGrad.push_back(zeroVector);
 					tempGrad.push_back(zeroVector);
+          normalVec.push_back(zeroVector);
+
+          isFS.push_back(0);
+          curvature.push_back(0);
 					L.push_back(zeromat);
-					L2.push_back(zeromat);					
+					L2.push_back(zeromat);
 					temp.push_back(T0);
 					enthalpy.push_back(0);
-					enthalpydot.push_back(0);					
+					enthalpydot.push_back(0);
 					type.push_back("Boundary");
 					force.push_back(zeroVector);
 					isSensor.push_back(false);
 					heatSensed.push_back(0);
-					forceSensed.push_back(zeroVector);					
+					forceSensed.push_back(zeroVector);
  					numParticles+=1;
 					n+=1;
 
@@ -187,7 +199,7 @@ void ParticleAttributes::boundaryInit(){
 				std::cout << "Dimensions Not Specified. Check Input File." << std::endl;
 				assert(0);
 			}
-		} 
+		}
 
 		// Initialize Block Type Solid Boundary.
 		else if(boundaryEntry["type"] == "block"){
@@ -224,16 +236,20 @@ void ParticleAttributes::boundaryInit(){
 					Real3 zeroVector{0,0,0};
 					Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 					mass.push_back(0);
-					vol.push_back(0);					    
+					vol.push_back(0);
 					pos.push_back(posToAdd);
 					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);			
+					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
 					densdot.push_back(0);
 					densGrad.push_back(zeroVector);
 					tempGrad.push_back(zeroVector);
+          normalVec.push_back(zeroVector);
+
+          isFS.push_back(0);
+          curvature.push_back(0);
 					L.push_back(zeromat);
-					L2.push_back(zeromat);					
+					L2.push_back(zeromat);
 					// temp.push_back(0.5 * posToAdd[0] * posToAdd[0]);
 					temp.push_back(T0);
 					enthalpy.push_back(0);
@@ -246,7 +262,7 @@ void ParticleAttributes::boundaryInit(){
 					numParticles+=1;
 					n+=1;
 				}}}
-				
+
 			} else if (simDataIn["dimensions"] == 2){
 				std::cout << "... Generating 2D Block Boundary" << std::endl;
 				for (int i = offset; i <= (int)((x1 - x0)/dx) - offset; i ++ ){
@@ -257,23 +273,27 @@ void ParticleAttributes::boundaryInit(){
 					const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 					mass.push_back(0);
 					vol.push_back(0);
-					pos.push_back(posToAdd); 
+					pos.push_back(posToAdd);
 					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);			
+					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
 					densdot.push_back(0);
 					densGrad.push_back(zeroVector);
 					tempGrad.push_back(zeroVector);
+          normalVec.push_back(zeroVector);
+
+          isFS.push_back(0);
+          curvature.push_back(0);
 					L.push_back(zeromat);
-					L2.push_back(zeromat);					
+					L2.push_back(zeromat);
 					temp.push_back(T0);
 					enthalpy.push_back(0);
-					enthalpydot.push_back(0);					
+					enthalpydot.push_back(0);
 					type.push_back("Boundary");
 					force.push_back(zeroVector);
 					isSensor.push_back(false);
 					heatSensed.push_back(0);
-					forceSensed.push_back(zeroVector);					
+					forceSensed.push_back(zeroVector);
  					numParticles+=1;
 					n+=1;
 
@@ -282,7 +302,7 @@ void ParticleAttributes::boundaryInit(){
 			} else{
 				std::cout << "Dimensions Not Specified. Check Input File." << std::endl;
 				assert(0);
-			
+
 			}
 
 		}
@@ -321,11 +341,11 @@ void ParticleAttributes::fluidInit(){
 			offset = 1;
 		}
 
-		jstart = offset; 
+		jstart = offset;
 		jend = (int)((y1 - y0)/dx) - offset;
 		if (simDataIn["dimensions"] == 2){
 			jstart = 0; jend = 0;
-		} 
+		}
 
 
 
@@ -342,27 +362,30 @@ void ParticleAttributes::fluidInit(){
 			mass.push_back(0);
 			vol.push_back(0);
 			pos.push_back(posToAdd);
-			vel.push_back(zeroVector);			
-			acc.push_back(zeroVector);			
+			vel.push_back(getv0());
+			acc.push_back(zeroVector);
 			dens.push_back(getRho0());
-			// dens.push_back(posToAdd[0]);
 			densdot.push_back(0);
 			densGrad.push_back(zeroVector);
 			tempGrad.push_back(zeroVector);
+      normalVec.push_back(zeroVector);
+
+      isFS.push_back(0);
+      curvature.push_back(0);
 			L.push_back(zeromat);
-			L2.push_back(zeromat);			
-			// temp.push_back(getT0());
-			temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
+			L2.push_back(zeromat);
+			temp.push_back(getT0());
+			// temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
 			enthalpy.push_back(0);
 			enthalpydot.push_back(0);
 			type.push_back("Fluid");
 			force.push_back(zeroVector);
 			isSensor.push_back(false);
 			heatSensed.push_back(0);
-			forceSensed.push_back(zeroVector);							
+			forceSensed.push_back(zeroVector);
 			numParticles += 1;
 			n += 1;
-			
+
 		}}}
 
 		std::cout << "Initialized Block of " << n << " Particles from input file.\n\n" << std::endl;
@@ -378,7 +401,7 @@ void ParticleAttributes::initParticles(){
 	else if ( parDataIn["type"] == "Boundary" ) boundaryInit();
 	else{
 			std::cout << "Input File Error. Please Check input." << std::endl;
-			assert(0);		
+			assert(0);
 	}
 
 }

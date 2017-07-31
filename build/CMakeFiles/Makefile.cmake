@@ -10,6 +10,8 @@ set(CMAKE_MAKEFILE_DEPENDS
   "../CMake/Common.cmake"
   "../CMake/FindEigen3.cmake"
   "../CMake/FindH5Part.cmake"
+  "../CMake/FindPackageHandleStandardArgs.cmake"
+  "../CMake/FindPackageMessage.cmake"
   "../CMake/Findhdf5.cmake"
   "../CMakeLists.txt"
   "CMakeFiles/3.7.2/CMakeCCompiler.cmake"

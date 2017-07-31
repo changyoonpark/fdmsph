@@ -27,8 +27,11 @@ public:
 	std::vector<Real3> force;
 	std::vector<Real>  dens;
 	std::vector<Real3> densGrad;
+	std::vector<Real3> normalVec;
+	std::vector<Real>  curvature;
 	std::vector<Real3> tempGrad;
 	std::vector<Real3x3> L;
+	std::vector<Real> isFS;
 	std::vector<Real3x3> L2;
 	std::vector<Real>  temp;
 	std::vector<Real>  enthalpy;
@@ -43,10 +46,12 @@ public:
 
 //  This should only work for fluid particles
 	inline Real getT0(){ 		  		 return parDataIn["T0"];}
+	inline Real3 getv0(){                return Real3{parDataIn["v0"][0],parDataIn["v0"][1],parDataIn["v0"][2]};}
 	inline Real getSpecificHeat(){ 		 return parDataIn["specificHeat"];}
 	inline Real getRho0(){        		 return parDataIn["rho0"];}
-	inline Real getMaterialDensity(){    return parDataIn["rho_material"];} 
+	inline Real getMaterialDensity(){    return parDataIn["rho_material"];}
 	inline Real getMu(){				 return parDataIn["mu"];}
+	inline Real getSurfaceTensionCoeff(){ return parDataIn["surfaceTensionCoeff"];}
 	inline Real getSoundSpeed() {		 return parDataIn["soundSpeed"];}
 	inline Real getThermalExpansion() {  return parDataIn["thermalExpansion"];}
 	inline Real getViscosity(){          return parDataIn["viscosity"];}

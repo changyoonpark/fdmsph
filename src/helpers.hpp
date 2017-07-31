@@ -7,7 +7,7 @@
 #include <Eigen/Dense>
 #include "json.hpp"
 
-#define NUMTHREADS 4
+#define NUMTHREADS 36
 #define MAX_NEIGHBORS 200
 #define EPSL_SMALL 1E-10
 // using namespace CompactNSearch;
@@ -26,7 +26,7 @@ namespace RealOps{
 
 	using Real3 = std::array<Real,3>;
 	using Real3x3 = std::array<Real3,3>;
-	
+
 	const Uint IDXPAIR[6][2] = {{0,0},{1,1},{2,2},{0,1},{1,2},{0,2}};
 	// const Real NEG_DELTA_MN[6]   = {-1.0,-1.0,-1.0,0,0,0};
 	// Eigen::Matrix3d A((Eigen::Matrix3d() << 1, 2, 3, 4, 5, 6, 7, 8, 9).finished());
@@ -35,6 +35,23 @@ namespace RealOps{
 		return Real3x3{Real3{vec(0),vec(3),vec(5)},
 					   Real3{vec(3),vec(1),vec(4)},
 					   Real3{vec(5),vec(4),vec(2)}};
+	}
+
+	inline Real maxEig( VectorXd& a){
+		Real result = a[0];
+		if (a[1] > result)
+		  result = a[1];
+
+		if (a[2] > result)
+		  result = a[2];
+
+		return result;
+	}
+
+	inline void assign( MatrixXd& a, const Real3x3& b ){
+		for(int i=0;i<3;i++)
+		for(int j=0;j<3;j++)
+			a(i,j)=b[i][j];
 	}
 
 	inline std::array<Real,3> add( const std::array<Real,3>& a,  const std::array<Real,3>& b) {
@@ -63,7 +80,7 @@ namespace RealOps{
 
 	inline std::array<Real,3> cross( const std::array<Real,3>& a,  const std::array<Real,3>& b) {
 		return std::array<Real,3>{ a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]};
-	}	
+	}
 
 	inline Real dot( const std::array<Real,3>& a,  const std::array<Real,3>& b) {
 	    return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
@@ -212,9 +229,9 @@ namespace RealOps{
  	}
 
 
- 	inline Real delta_SPH(Real  rho_i,      Real rho_j, 						  
- 						  Real  vol_j,        Real delta, 
- 						  Real  soundSpeed, Real smoothingLength, 
+ 	inline Real delta_SPH(Real  rho_i,      Real rho_j,
+ 						  Real  vol_j,        Real delta,
+ 						  Real  soundSpeed, Real smoothingLength,
  						  Real  dist,
  						  Real3 relpos,    	Real3 gWij,
 						  Real3 densGrad_i, Real3 densGrad_j){
@@ -261,13 +278,13 @@ namespace RealOps{
  	// inline Real cleary(Real Ti, Real Tj, Real mj, Real rho_i, Real rho_j, Real ki, Real kj, Real3 relpos, Real dist, Real3 gWij){
  	// 	return 4.0 * mj * ki * kj * (Ti - Tj) * dot(relpos, gWij) / (rho_i * rho_j * (ki + kj) * (dist * dist));
  	// }
-	inline Real consistentHeatTransfer(Real3x3 L2_i, Real3 gradT_i, 
-						   Real Ti, Real Tj, Real mj, Real rho_i, Real rho_j, Real ki, Real kj, 
-						   Real3 relpos, Real3 reldir, 
+	inline Real consistentHeatTransfer(Real3x3 L2_i, Real3 gradT_i,
+						   Real Ti, Real Tj, Real mj, Real rho_i, Real rho_j, Real ki, Real kj,
+						   Real3 relpos, Real3 reldir,
 						   Real dist, Real3 gWij, Real vol_j){
 		Real3x3 eij_gWij = tensorProduct(reldir,gWij);
-		return 4.0 * (ki * kj / (ki + kj)) / (rho_i) * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j; 
-		// return 2.0 * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j; 
+		return 4.0 * (ki * kj / (ki + kj)) / (rho_i) * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j;
+		// return 2.0 * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j;
 		// return 2.0 * ((Ti-Tj) / dist) * dot(reldir,gWij) * vol_j;
 	}
 

@@ -229,6 +229,8 @@ chrono
 -
 Eigen/Dense
 -
+Eigen/Eigenvalues
+-
 json.hpp
 /Users/chang/Desktop/ResearchCodes/FDMSPH/src/json.hpp
 helpers.hpp

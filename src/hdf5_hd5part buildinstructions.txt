@@ -1,52 +1,51 @@
 scp folder to remote :
 
-1.
-tar -czvf fdmsph.tar.gz ./fdmsph
-
-2.
-scp -i "./FDMSPH/sph.pem" fdmsph.tar.gz ubuntu@ec2-54-183-152-159.us-west-1.compute.amazonaws.com:~/sph
+tar -czvf fdmsph.tar.gz ./FDMSPH
+scp -i "./FDMSPH/sph.pem" fdmsph.tar.gz ubuntu@ec2-54-67-52-243.us-west-1.compute.amazonaws.com:~/code
 
 3. in the directory : 
 tar -xvzf fdmsph.tar.gz
 
 ----------------------------------------------------------------------------------------------
+grind:
+
+
+Ramdisk on UBUNTU :
+
+mkdir -p code
+sudo mount -t tmpfs -o size=15000M tmpfs code
+
+Prereq packages : 
+
+sudo apt-get update
+sudo apt-get install git -y
+sudo apt-get install mercurial -y
+sudo apt-get install gcc g++ -y
+sudo apt-get install cmake -y
+sudo apt-get install htop -y
+sudo apt-get install zlib1g-dev -y
+
 HDF5 / H5Part Build instructions (single core): 
 
--- Recommend that you install GCC7 for compilation. The linker somehow wasn't able to properly load 
-H5Part Libraries with gcc-5
+1. download and build hdf5.
 
-1. download and build the stuff
-
-wget https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar
-tar -xvf hdf5-1.8.19.tar
-cd hdf5-1.8.19
-sudo apt-get install make
+wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.1/src/hdf5-1.10.1.tar.gz
+tar -xvf hdf5-1.10.1.tar.gz
+cd hdf5-1.10.1
 ./configure --prefix=/usr/local/hdf5 && sudo make && sudo make install
 
-2. download hd5part. 
+2. download and build hd5part. 
 
 wget https://codeforge.lbl.gov/frs/download.php/file/387/H5Part-1.6.6.tar.gz
 tar -xvzf H5Part-1.6.6.tar.gz
-sudo apt-get install zlib1g-dev
-./configure --prefix=/usr/local/hdf5
-sudo make && sudo make install 
-
-3. should be good to go.
-
--I/usr/local/hdf5/include -L/usr/local/hdf5/lib -I/usr/local/eigen -lH5Part -lhdf5 -lz -lsz
-
-**
-in UBUNTU, the default directory should be
---prefix=/home/ubuntu/hdf5-1.8.19
-
+cd H5Part-1.6.6
+./configure --prefix=/usr/local/hdf5 && sudo make && sudo make install
 
 ---------------------------------------------------------------------------------------------
 Compile with Eigen 
 
-Goto 
-/usr/local 
-
-sudo apt-get install mercurial && hg clone https://bitbucket.org/eigen/eigen/
+cd /usr/local
+sudo hg clone https://bitbucket.org/eigen/eigen/
 
 1. In the compiler option, specify -I/usr/local/eigen
 
@@ -56,14 +55,14 @@ Program Build Instructions :
 2. cmake ..
 3. ccmake .
 4. set C_COMPILER and CXX_COMPILER to gcc.
-5. set CMAKE_CXX_FLAGS : -I/usr/local/hdf5/include -DPARALLEL_IO -DH5_HAVE_PARALLEL -L/usr/local/hdf5/lib -lH5Part -lhdf5 -lz -lsz
+5. set CMAKE_CXX_FLAGS : -I/usr/local/hdf5/include -L/usr/local/hdf5/lib -lH5Part -lhdf5 -lz -lsz
  OR FOR SERIAL
  -I/usr/local/hdf5/include -L/usr/local/hdf5/lib -lH5Part -lhdf5 
 6. should be able to make at this point.
 
 
 
-
+-I/usr/local/hdf5/include -L/usr/local/hdf5/lib
 --------------------------------------------------------------
 
 Building it into your program (directly from hd5part webpage) :
