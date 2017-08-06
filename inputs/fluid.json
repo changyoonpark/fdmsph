@@ -1,10 +1,11 @@
 {
 	"type" : "Fluid",
-	"rho0" : 1000.0,	
+	"rho0" : 1000.0,
 	"T0" : 100.0,
 	"mu" : 0.0003,
 	"soundSpeed" : 50.0,
 	"specificHeat" : 4000.0,
+	"surfaceTensionCoeff" : 0.059,
 	"thermalConductivity" : 0.6,
 	"thermalExpansion" : 0,
 	"v0"   : [0,0,-10],

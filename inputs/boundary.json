@@ -1,21 +1,21 @@
 {
 	"type" : "Boundary",
-	"rho_material" : 2700.0,	
+	"rho_material" : 2700.0,
 	"T0" : 20.0,
 	"mu" : 0.0003,
 	"rho0" : 1000.0,
 	"soundSpeed" : 50.0,
+	"surfaceTensionCoeff" : 0,
 	"thermalExpansion" : 0,
-	"thermalConductivity" : 230.0,	
+	"thermalConductivity" : 230.0,
 	"specificHeat" : 900.0,
-	"objects" : 
+	"objects" :
 	[
-		{"type" : "block", 
+		{"type" : "block",
 		 "includeBoundary" : "True",
-		 "begin" : [-0.00175,-0.00175,-0.0002], 
-		 "end" : [0.00175,0.00175,0],
+		 "begin" : [-0.00015,-0.00015, -0.0000125],
+		 "end" : [0.00015,0.00015,0],
 		 "rho0" : 1000.0,
 		 "T0" : 20.0}
 	]
 }
-

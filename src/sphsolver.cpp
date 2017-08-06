@@ -372,7 +372,7 @@ void SPHSolver::computeInteractions(){
 			if (dims == 2){
 				L_i[1][0] = 0; L_i[1][1] = 1.0; L_i[1][2] = 0; L_i[2][1] = 0;
 			}
-
+      checkSingularity(L_i);
 			L_i = inv(L_i);
       MatrixXd _L_i(3,3); assign(_L_i,L_i);
       VectorXcd eigs_im = _L_i.eigenvalues(); VectorXd eigs = - eigs_im.real();
@@ -489,7 +489,7 @@ void SPHSolver::computeInteractions(){
 			const Real&   m_i = pData[setName_i]->mass[i];
 			const Real& rho_i = pData[setName_i]->dens[i];
 			const Real&   T_i = pData[setName_i]->temp[i];
-
+      const Real& vol_i = pData[setName_i]->vol[i];
 			const Real&   k_i = thermalConductivity(pData[setName_i]->getType(),
 				  							 T_i);
 
@@ -501,8 +501,11 @@ void SPHSolver::computeInteractions(){
 			const Real3& densGrad_i = pData[setName_i]->densGrad[i];
       const Real3& normal_i =  pData[setName_i]->normalVec[i];
 			const Real3x3& L2_i = pData[setName_i]->L2[i];
+
+
       Real& curvature = pData[setName_i]->curvature[i];
-      Real curvatureCorrection = (m_i / rho_i) * W_ij(0, smoothingLength);
+      curvature = 0;
+      Real curvatureCorrection = (vol_i) * W_ij(0, smoothingLength);
 
 
 			bool isSensor_i   = (pData[setName_i]->isSensor[i]);
@@ -576,16 +579,18 @@ void SPHSolver::computeInteractions(){
 
 					pData[setName_i]->enthalpydot[i] += heat;
 
-          if(isFS_i && isFS_j){
-            curvature += (m_j / rho_j) * dot(sub(normal_j, normal_i), gWij);
-            curvatureCorrection += (m_j / rho_j) * Wij;
-          }
 
 					// If the particle is not a boundary particle, accumulate the momentum contribution.
 					if (!isBoundary_i){
 					// Acceleration Due to pressure gradient.
 						Real3 a = add(pressureAcc_ij(m_j,gWij,P_i,P_j,rho_i,rho_j,vol_j), viscosityAcc_ij(m_j, relpos, gWij, rho_i, rho_j,dist, relvel, mu_j));
 						pData[setName_i]->acc[i]      = add(pData[setName_i]->acc[i], a);
+            // If particle i and particle j are both free-surface particles, add the surface tension contribution.
+            if(isFS_i && isFS_j){
+              curvature += (vol_j) * dot(sub(normal_j, normal_i), gWij);
+              curvatureCorrection += (vol_j) * Wij;
+            }
+
 					}
 
 					// // If the boundary particle is a sensor, accumulate the data.
@@ -600,6 +605,13 @@ void SPHSolver::computeInteractions(){
 				}
 			}
 
+      curvature = curvature / curvatureCorrection;
+      // Acceleration Due to Surface Tension. Apply only to Free-surface particles.
+      if (isFS_i && isBoundary_i){
+        pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i],
+          mult(- (pData[setName_i]->getSurfaceTensionCoeff() / m_i) * curvature,normal_i)
+        );
+      }
 			// Acceleration Due to Body Force. Apply only to non-boundary particles.
 			if (!isBoundary_i){
 				pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i],bodyForceAcc_i());
@@ -607,7 +619,6 @@ void SPHSolver::computeInteractions(){
 				pData[setName_i]->acc[i] = zerovec;
 				pData[setName_i]->vel[i] = zerovec;
 			}
-      curvature = curvature / curvatureCorrection;
 
 		}
 
@@ -688,7 +699,6 @@ void SPHSolver::marchTime(Uint t){
 			for (int i = 0; i < ps.n_points(); ++i){
 				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
 				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
-								// std::cout << pData[setName]->dens[i] << std::endl;
 
 			}
 		}

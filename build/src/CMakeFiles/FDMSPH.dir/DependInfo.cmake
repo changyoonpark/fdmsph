@@ -20,6 +20,7 @@ set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../"
   "/usr/local/eigen"
   "../extern/CompactNSearch/include"
+  "/Users/chang/anaconda3/include"
   "/usr/local/hdf5/include"
   )
 

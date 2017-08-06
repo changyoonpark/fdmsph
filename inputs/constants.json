@@ -2,17 +2,17 @@
 
   "operation" : "SPHSimulation",
 
-  "operation2" : "GeometryGeneration",
+  "operation1" : "GeometryGeneration",
 
-  "dropletRadius" : 0.0005,
-  "dropletCenter" : [0.0,0.0,0.00055],
+  "dropletRadius" : 0.00005,
+  "dropletCenter" : [0.0,0.0,0.000053],
   "geomOutputFile" : "../inputs/droplet_dx_0.00005.h5part",
 
   "outputFile" : "test_out",
   "dimensions" : 3,
   "extent" : [1,1,1],
-  "dx" : 0.00005,
-  "smoothingLength" : 0.0001,
+  "dx" : 0.0000025,
+  "smoothingLength" : 0.000005,
   "EOS" : "Linear",
   "diffusionModel" : "DeltaSPH",
   "kernelType" : "Wendland_2h",
@@ -24,12 +24,11 @@
   "pressureFormulation" : 3,
   "bodyForce" : "Gravity",
   "delta" : 0.1,
-  "dt" : 0.000000001,
-  "steps1" : 200000,
-  "steps" : 2,
-  "outper1" : 100,
-  "outper" : 1,
-  "newfileper" : 2000,
+  "dt" : 0.000000005,
+  "outputStart" : 0,
+  "steps" : 500000,
+  "outper" : 1000,
+  "newfileper" : 10000,
   "sensors" : [
     {"type" : "sensorZPlane",
      "coord" : 0.0}

@@ -97,6 +97,13 @@ namespace RealOps{
 	inline bool iseq( const std::array<Real,3>& a, const std::array<Real,3>& b){
 		return (a[0]==b[0] && a[1]==b[1] && a[2]==b[2]) ? true : false;
 	}
+	inline void print( const Real3x3& a){
+		std::cout << " Real3x3 --------------------------------------------------" << std::endl;
+		std::cout << " Real3 : { " << a[0][0] << ", " << a[0][1] << ", " << a[0][2] << " }" << std::endl;
+		std::cout << " Real3 : { " << a[1][0] << ", " << a[1][1] << ", " << a[1][2] << " }" << std::endl;
+		std::cout << " Real3 : { " << a[2][0] << ", " << a[2][1] << ", " << a[2][2] << " }" << std::endl;
+
+	}
 
 	inline void print(  const std::string& s , const std::array<Real,3>& a ){
 		std::cout << s << " Real3 : { " << a[0] << ", " << a[1] << ", " << a[2] << " }" << std::endl;
@@ -146,8 +153,32 @@ namespace RealOps{
  		c[1][0] = a[1]*b[0], c[1][1] = a[1]*b[1], c[1][2] = a[1]*b[2];
  		c[2][0] = a[2]*b[0], c[2][1] = a[2]*b[1], c[2][2] = a[2]*b[2];
 
+		// if (c[0][0] <= 1.0E-10 && c[0][0] >= -1.0E-10 ) c[0][0] = 1.0;
+		// if (c[1][1] <= 1.0E-10 && c[1][1] >= -1.0E-10 ) c[1][1] = 1.0;
+		// if (c[2][2] <= 1.0E-10 && c[2][2] >= -1.0E-10 ) c[2][2] = 1.0;
+
  		return c;
  	}
+
+	inline void checkSingularity(Real3x3& L_i){
+
+		if (abs(L_i[0][0]) < 1.0E-10 &&
+				abs(L_i[1][0]) < 1.0E-10 && abs(L_i[0][1]) < 1.0E-10 &&
+				abs(L_i[1][2]) < 1.0E-10 && abs(L_i[2][1]) < 1.0E-10){
+			L_i[0][0] = 1.0;
+		}
+		if (abs(L_i[1][1]) < 1.0E-10 &&
+				abs(L_i[1][2]) < 1.0E-10 && abs(L_i[2][1]) < 1.0E-10 &&
+				abs(L_i[0][1]) < 1.0E-10 && abs(L_i[1][0]) < 1.0E-10){
+			L_i[1][1] = 1.0;
+		}
+		if (abs(L_i[2][2]) < 1.0E-10 &&
+				abs(L_i[2][0]) < 1.0E-10 && abs(L_i[2][1]) < 1.0E-10 &&
+				abs(L_i[0][2]) < 1.0E-10 && abs(L_i[1][2]) < 1.0E-10){
+			L_i[2][2] = 1.0;
+		}
+
+	}
 
  	inline Real3 mult(Real3x3& a, Real3& b){
  		return Real3{a[0][0] * b[0] + a[0][1] * b[1] + a[0][2] * b[2],
@@ -256,7 +287,8 @@ namespace RealOps{
  	}
 
  	inline Real3 viscosity_acc_ij_Shao(Real mj, Real3 relpos, Real3 gWij, Real rho_i, Real rho_j, Real dist, Real3 relvel, Real mu){
- 		return mult(( mj * 4. * mu * dot(relpos, gWij) / ((rho_i + rho_j) * (dist * dist + EPSL_SMALL )) ), relvel );
+
+ 		return mult(( 4. * mj * mu * dot(relpos, gWij) / ((rho_i + rho_j) * (dist * dist + EPSL_SMALL )) ), relvel );
  	}
 
  	inline Real3 pressure_acc_ij_1(Real mj, Real3 gWij, Real P_i, Real P_j, Real rho_i, Real rho_j, Real vol_j){
