@@ -315,8 +315,12 @@ namespace RealOps{
 						   Real3 relpos, Real3 reldir,
 						   Real dist, Real3 gWij, Real vol_j){
 		Real3x3 eij_gWij = tensorProduct(reldir,gWij);
-		return 4.0 * (ki * kj / (ki + kj)) / (rho_i) * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j;
-		// return 2.0 * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j;
+
+		// return 4.0 * mj * ki * kj * (Ti - Tj) * dot(relpos, gWij) / (rho_i * rho_j * (ki + kj) * (dist * dist));
+
+		// return 4.0 * (ki * kj / (ki + kj)) / (rho_i) * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - (ki * kj / (ki + kj)) * dot(reldir,gradT_i)) * vol_j;
+		return (4.0 / (rho_i)) * doubleDot(L2_i,eij_gWij) * (ki * kj / (ki + kj)) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j;
+		return (2.0 / (rho_i)) * doubleDot(L2_i,eij_gWij) * ((Ti - Tj) / (dist) - dot(reldir,gradT_i)) * vol_j;
 		// return 2.0 * ((Ti-Tj) / dist) * dot(reldir,gWij) * vol_j;
 	}
 

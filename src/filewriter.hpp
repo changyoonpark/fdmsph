@@ -38,7 +38,7 @@ public:
 	void write(std::map<std::string,ParticleAttributes*> &pData, Real smoothingLength){
 		int totalParticles = 0;
 		std::vector<Real> h,x,y,z,vx,vy,vz,dens,temp,heatSensed,fxSensed,fySensed,fzSensed,isSensor;
-		std::vector<Real> nx,ny,nz,isFS,curvature;
+		std::vector<Real> nx,ny,nz,isFS,tgx,tgy,tgz,curvature,hdot;
 
 		for (const auto& dataType : pData) totalParticles += dataType.second->numParticles;
 		std::cout << "... Writing Results to " << currentFileName << std::endl;
@@ -53,6 +53,12 @@ public:
 		nx.resize(totalParticles);
 		ny.resize(totalParticles);
 		nz.resize(totalParticles);
+
+		tgx.resize(totalParticles);
+		tgy.resize(totalParticles);
+		tgz.resize(totalParticles);
+
+		hdot.resize(totalParticles);
 
 		mass.resize(totalParticles);
 		h.resize(totalParticles);
@@ -77,6 +83,12 @@ public:
 				nx[i] = dataType.second->normalVec[i - idx][0];
 				ny[i] = dataType.second->normalVec[i - idx][1];
 				nz[i] = dataType.second->normalVec[i - idx][2];
+
+				tgx[i] = dataType.second->tempGrad[i - idx][0];
+				tgy[i] = dataType.second->tempGrad[i - idx][1];
+				tgz[i] = dataType.second->tempGrad[i - idx][2];
+
+				hdot[i] = dataType.second->enthalpydot[i - idx];
 
 				isFS[i] = dataType.second->isFS[i - idx];
 				curvature[i] = dataType.second->curvature[i - idx];
@@ -116,6 +128,10 @@ public:
 		H5PartWriteDataFloat64(fileWriter,"nx",&nx[0]);
 		H5PartWriteDataFloat64(fileWriter,"ny",&ny[0]);
 		H5PartWriteDataFloat64(fileWriter,"nz",&nz[0]);
+		H5PartWriteDataFloat64(fileWriter,"tgx",&tgx[0]);
+		H5PartWriteDataFloat64(fileWriter,"tgy",&tgy[0]);
+		H5PartWriteDataFloat64(fileWriter,"tgz",&tgz[0]);
+		H5PartWriteDataFloat64(fileWriter,"hdot",&hdot[0]);
 		H5PartWriteDataFloat64(fileWriter,"freeSurface",&isFS[0]);
 		H5PartWriteDataFloat64(fileWriter,"curvature",&curvature[0]);
 

@@ -64,7 +64,6 @@ void SPHSolver::initializeMass(){
 		// Real totmass = 0;
 		for (int i = 0; i < ps_i.n_points(); ++i){
 			Real kernelSum = 0.;
-
 			for (const auto& setName_j : setNames){
 
 				const int setID_j = ids[setName_j];
@@ -83,7 +82,6 @@ void SPHSolver::initializeMass(){
 
 					Real      Wij =  W_ij(dist, smoothingLength);
 					kernelSum += Wij;
-
 				}
 
 			}
@@ -93,9 +91,7 @@ void SPHSolver::initializeMass(){
 			pData[setName_i]->mass[i] =  pData[setName_i]->dens[i] * pData[setName_i]->vol[i];
 
 		}
-
-
-	}
+  }
 
 }
 
@@ -314,6 +310,7 @@ void SPHSolver::computeInteractions(){
 			L2_i = zeromat;
 
 
+
 			// Normalized Temperature Gradient
 			pData[setName_i]->tempGrad[i] = zerovec;
 			// Renormalized Density Gradient.
@@ -358,10 +355,10 @@ void SPHSolver::computeInteractions(){
 					Real3    gWij = gW_ij(dist, reldir, smoothingLength);
 
 					// Compute First derivative Renormalization Tensor
-					L_i = add(L_i,mult(vol_j,tensorProduct(gWij,relpos)));
+					L_i = add(L_i,mult(- vol_j,tensorProduct(gWij,relpos)));
 					// Compute Renormalized Density Gradient
-					pData[setName_i]->densGrad[i]  = add(pData[setName_i]->densGrad[i], mult((rho_i - rho_j) * vol_j,gWij));
-					pData[setName_i]->tempGrad[i]  = add(pData[setName_i]->tempGrad[i], mult((pData[setName_i]->temp[i] - pData[setName_j]->temp[j]) * vol_j,gWij));
+					pData[setName_i]->densGrad[i]  = add(pData[setName_i]->densGrad[i], mult((rho_j - rho_i) * vol_j,gWij));
+					pData[setName_i]->tempGrad[i]  = add(pData[setName_i]->tempGrad[i], mult((pData[setName_j]->temp[j] - pData[setName_i]->temp[i]) * vol_j,gWij));
           pData[setName_i]->normalVec[i] = add(pData[setName_i]->normalVec[i],mult(vol_j,gWij));
 				}
 			}
@@ -372,10 +369,11 @@ void SPHSolver::computeInteractions(){
 			if (dims == 2){
 				L_i[1][0] = 0; L_i[1][1] = 1.0; L_i[1][2] = 0; L_i[2][1] = 0;
 			}
-      checkSingularity(L_i);
+      // checkSingularity(L_i);
+
 			L_i = inv(L_i);
       MatrixXd _L_i(3,3); assign(_L_i,L_i);
-      VectorXcd eigs_im = _L_i.eigenvalues(); VectorXd eigs = - eigs_im.real();
+      VectorXcd eigs_im = _L_i.eigenvalues(); VectorXd eigs = eigs_im.real();
       Real lambda = maxEig(eigs);
 
 
@@ -603,10 +601,15 @@ void SPHSolver::computeInteractions(){
 
 
 				}
+
 			}
 
       curvature = curvature / curvatureCorrection;
+
+      // // For debugging only
+      // pData[setName_i]->curvature[i] = pData[setName_i]->enthalpydot[i];
       // Acceleration Due to Surface Tension. Apply only to Free-surface particles.
+      // pData[setName_i]->enthalpydot[i] =
       if (isFS_i && isBoundary_i){
         pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i],
           mult(- (pData[setName_i]->getSurfaceTensionCoeff() / m_i) * curvature,normal_i)
@@ -624,6 +627,65 @@ void SPHSolver::computeInteractions(){
 
 
 	}
+
+
+
+
+
+
+
+
+  //
+  //
+  // std::cout << "--- *Smoothing out* temperature field." << std::endl;
+  // for (const auto& setName_i : setNames){
+  //
+  //   const int setID_i = ids[setName_i];
+  //   const auto& ps_i = nsearch->point_set(setID_i);
+  //   // Real totmass = 0;
+  //   for (int i = 0; i < ps_i.n_points(); ++i){
+  //     Real T_xsph = 0.;
+  //     const Real T_i = pData[setName_i]->enthalpydot[i];
+  //     const Real rho_i = pData[setName_i]->dens[i];
+  //     for (const auto& setName_j : setNames){
+  //
+  //       const int setID_j = ids[setName_j];
+  //       const auto& ps_j = nsearch->point_set(setID_j);
+  //
+  //       for (int _j = 0; _j < ps_i.n_neighbors(setID_j,i); _j++){
+  //         Uint const j = ps_i.neighbor(setID_j, i, _j);
+  //
+  //         const Real3  relpos = sub(pData[setName_i]->pos[i],pData[setName_j]->pos[j]);
+  //         const Real     dist = length(relpos);
+  //
+  //         if ( dist > smoothingLength ) continue;
+  //
+  //         const Real3  relvel = sub(pData[setName_i]->vel[i],pData[setName_j]->vel[j]);
+  //         const Real3  reldir = div(relpos,dist);
+  //         const Real      m_j = pData[setName_j]->mass[j];
+  //         const Real      Wij =  W_ij(dist, smoothingLength);
+  //         const Real T_j = pData[setName_j]->enthalpydot[j];
+  //         const Real rho_j = pData[setName_j]->dens[j];
+  //
+  //         // XSPH correction for the temperature Field
+  //         T_xsph += 0.3 * m_j * (T_j - T_i) / ( 0.5 * (rho_i + rho_j) ) * Wij;
+  //       }
+  //
+  //     }
+  //     pData[setName_i]->enthalpydot[i]  += T_xsph;
+  //   }
+  // }
+
+
+
+
+
+
+
+
+
+
+
 
 
 }
@@ -692,6 +754,7 @@ void SPHSolver::marchTime(Uint t){
 
 				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
 				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
+
 			}
 		} else if (setName == "boundary"){
 		// Boundary Particles : march the density only.

@@ -35,6 +35,7 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 	const Real3 zeroVector{0,0,0};
 	const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 	int n = 0;
+  smoothingLength = simDataIn["smoothingLength"];
 	numParticles = 0;
 	for(int i=0;i<x.size();i++){
 
@@ -50,7 +51,15 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 		tempGrad.push_back(zeroVector);
     normalVec.push_back(zeroVector);
 
-		temp.push_back(getT0());
+    temp.push_back(getT0());
+    // Quick Hack..
+    // if (posToAdd[2] < 4.0 * smoothingLength){
+    //   temp.push_back(20.0 + (getT0() - 20.0) * posToAdd[2] / (4.0 * smoothingLength) );
+    // } else{
+    //   temp.push_back(getT0());
+    // }
+
+
     isFS.push_back(0);
     curvature.push_back(0);
 		// temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
@@ -374,8 +383,8 @@ void ParticleAttributes::fluidInit(){
       curvature.push_back(0);
 			L.push_back(zeromat);
 			L2.push_back(zeromat);
-			temp.push_back(getT0());
-			// temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
+
+      temp.push_back(getT0());
 			enthalpy.push_back(0);
 			enthalpydot.push_back(0);
 			type.push_back("Fluid");

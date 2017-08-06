@@ -7,7 +7,7 @@ scp -i "./FDMSPH/sph.pem" fdmsph_deploy.tar.gz ec2-54-219-186-234.us-west-1.comp
 :~/code
 
 3. in the directory :
-tar -xvzf fdmsph.tar.gz
+tar -xvzf fdmsph*.tar.gz
 
 ----------------------------------------------------------------------------------------------
 grind:
@@ -20,10 +20,10 @@ sudo mount -t tmpfs -o size=45000M tmpfs code
 
 Prereq packages :
 
-sudo apt-get update
-sudo apt-get install git -y
-sudo apt-get install mercurial -y
-sudo apt-get install gcc g++ -y
+sudo apt-get update &&
+sudo apt-get install git -y &&
+sudo apt-get install mercurial -y &&
+sudo apt-get install gcc g++ -y &&
 sudo apt-get install cmake -y &&
 sudo apt-get install htop -y &&
 sudo apt-get install zlib1g-dev -y &&
@@ -51,8 +51,6 @@ cd H5Part-1.6.6 &&
 
 cd /usr/local &&
 sudo hg clone https://bitbucket.org/eigen/eigen/
-
-1. In the compiler option, specify -I/usr/local/eigen
 
 Program Build Instructions :
 

@@ -54,10 +54,12 @@ bc = DirichletBC(V,Constant((0,0,0)),clamped_boundary)
 def epsilon(u):
     return 0.5*(nabla_grad(u)+nabla_grad(u).T)
 # define stifness tensor
-# def sigma(u):
-    # return lamb*((nabla_div(u)-alpha*delta_T*(3+2*mu/lamb))*Identity(d))+2*mu*epsilon(u)
+
 def sigma(u):
-    return lamb*nabla_div(u)*Identity(d)+2*mu*epsilon(u)
+    return lamb*((nabla_div(u)-alpha*delta_T*(3+2*mu/lamb))*Identity(d))+2*mu*epsilon(u)
+
+# def sigma(u):
+    # return lamb*nabla_div(u)*Identity(d)+2*mu*epsilon(u)
 
 # Assign the source term manually
 f = Function(V)
