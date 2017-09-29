@@ -23,7 +23,7 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 	Uint nsteps     = H5PartGetNumSteps(fileReader);
 	std::cout << "... input file (.h5part) has " << nsteps << " timesteps with " << nparticles << " particles." << std::endl;
 
-	std::vector<Real> x,y,z;
+	std::vector<double> x,y,z;
 	x.resize(nparticles);
 	y.resize(nparticles);
 	z.resize(nparticles);
@@ -35,13 +35,14 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 	const Real3 zeroVector{0,0,0};
 	const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 	int n = 0;
-  smoothingLength = simDataIn["smoothingLength"];
+  	smoothingLength = simDataIn["smoothingLength"];
 	numParticles = 0;
 	for(int i=0;i<x.size();i++){
 
 		Real3 posToAdd{x[i],y[i],z[i]};
 		mass.push_back(0);
 		vol.push_back(0);
+    	perturb.push_back(zeroVector);
 		pos.push_back(posToAdd);
 		vel.push_back(getv0());
 		acc.push_back(zeroVector);
@@ -49,19 +50,21 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 		densdot.push_back(0);
 		densGrad.push_back(zeroVector);
 		tempGrad.push_back(zeroVector);
-    normalVec.push_back(zeroVector);
+    	normalVec.push_back(zeroVector);
 
-    temp.push_back(getT0());
+    // temp.push_back(getT0());
+		temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
+	
     // Quick Hack..
-    // if (posToAdd[2] < 4.0 * smoothingLength){
-    //   temp.push_back(20.0 + (getT0() - 20.0) * posToAdd[2] / (4.0 * smoothingLength) );
-    // } else{
-    //   temp.push_back(getT0());
-    // }
+		// if (posToAdd[0] < EPSL_SMALL2){
+		// temp.push_back(2000.0);
+		// } else{
+		// temp.push_back(getT0());
+		// }
 
 
-    isFS.push_back(0);
-    curvature.push_back(0);
+    	isFS.push_back(0);
+	    curvature.push_back(0);
 		// temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
 
 		L.push_back(zeromat);
@@ -77,6 +80,7 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 		numParticles+=1;
 		n+=1;
 	}
+
 	H5PartCloseFile(fileReader);
 	std::cout << "--- Particle Data Loaded : " << n << " Particles from input file." << std::endl;
 }
@@ -84,7 +88,6 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 void ParticleAttributes::boundaryInit(){
 
 	numParticles = 0;
-
 	smoothingLength = simDataIn["smoothingLength"];
 	dx              = simDataIn["dx"];
 
@@ -138,16 +141,17 @@ void ParticleAttributes::boundaryInit(){
 					mass.push_back(0);
 					vol.push_back(0);
 					pos.push_back(posToAdd);
+          			perturb.push_back(zeroVector);
 					vel.push_back(zeroVector);
 					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
 					densdot.push_back(0);
 					densGrad.push_back(zeroVector);
 					tempGrad.push_back(zeroVector);
-          normalVec.push_back(zeroVector);
+          			normalVec.push_back(zeroVector);
 
-          isFS.push_back(0);
-          curvature.push_back(0);
+          			isFS.push_back(0);
+          			curvature.push_back(0);
 					L.push_back(zeromat);
 					L2.push_back(zeromat);
 					temp.push_back(T0);
@@ -179,6 +183,7 @@ void ParticleAttributes::boundaryInit(){
 					mass.push_back(0);
 					vol.push_back(0);
 					pos.push_back(posToAdd);
+          			perturb.push_back(zeroVector);
 					vel.push_back(zeroVector);
 					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
@@ -236,17 +241,29 @@ void ParticleAttributes::boundaryInit(){
 				T0 = boundaryEntry["T0"];
 			}
 
+      std::mt19937 rng;
+      rng.seed(std::random_device()());
+      std::uniform_int_distribution<std::mt19937::result_type> dist6(0,1);
+
 			if (simDataIn["dimensions"] == 3){
 				std::cout << "... Generating 3D Block Boundary" << std::endl;
 				for (int i = offset; i <= (int)((x1 - x0)/dx) - offset; i ++ ){
 				for (int j = offset; j <= (int)((y1 - y0)/dx) - offset; j ++ ){
 				for (int k = offset; k <= (int)((z1 - z0)/dx) - offset; k ++ ){
-					Real3 posToAdd{x0 + dx * i, y0 + dx * j, z0 + dx * k};
+					Real3 posToAdd{x0 + dx * (Real)i, y0 + dx * (Real)j, z0 + dx * (Real)k};
+
+          Real3 _perturb{((Real)dist6(rng)-0.5) / 10.0 * dx,
+                        ((Real)dist6(rng)-0.5) / 10.0 * dx,
+                        ((Real)dist6(rng)-0.5) / 10.0 * dx};
+
+          posToAdd = add(posToAdd, _perturb);
+
 					Real3 zeroVector{0,0,0};
 					Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 					mass.push_back(0);
 					vol.push_back(0);
 					pos.push_back(posToAdd);
+          perturb.push_back(_perturb);
 					vel.push_back(zeroVector);
 					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
@@ -283,6 +300,7 @@ void ParticleAttributes::boundaryInit(){
 					mass.push_back(0);
 					vol.push_back(0);
 					pos.push_back(posToAdd);
+          			perturb.push_back(zeroVector);
 					vel.push_back(zeroVector);
 					acc.push_back(zeroVector);
 					dens.push_back(getRho0());
@@ -343,7 +361,7 @@ void ParticleAttributes::fluidInit(){
 		smoothingLength = simDataIn["smoothingLength"];
 		dx              = simDataIn["dx"];
 
-		int offset = 0, jstart, jend;
+		int offset = 0, jstart, jend, kstart, kend;
 		if (parDataIn["geometry"]["includeBoundary"] == "True"){
 			offset = 0;
 		} else{
@@ -352,39 +370,76 @@ void ParticleAttributes::fluidInit(){
 
 		jstart = offset;
 		jend = (int)((y1 - y0)/dx) - offset;
+
+		kstart = offset;
+		kend = (int)((z1 - z0)/dx) - offset;
 		if (simDataIn["dimensions"] == 2){
+			kstart = 0; kend = 0;
+		} else if (simDataIn["dimensions"] == 1){
 			jstart = 0; jend = 0;
+			kstart = 0; kend = 0;
 		}
 
-
+    	std::mt19937 rng;
+    	rng.seed(std::random_device()());
+    	std::uniform_int_distribution<std::mt19937::result_type> dist6(0,1000);
 
 		int n = 0;
 		numParticles = 0;
 		std::cout << "... Generating Particles" << std::endl;
 		for (int i = offset; i <= (int)((x1 - x0)/dx) - offset; i ++ ){
 		for (int j = jstart; j <= jend; j ++ ){
-		for (int k = offset; k <= (int)((z1 - z0)/dx) - offset; k ++ ){
+		for (int k = kstart; k <= kend; k ++ ){
 
 			Real3 zeroVector{0,0,0};
 			Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
-			Real3 posToAdd{x0 + dx * (Real)i, y0 + dx * (Real)j, z0 + dx * (Real)k};
+
+    //   Real3 _perturb{((Real)dist6(rng)/1000.0-0.5) / 2.0 * 0.5 *  dx,
+    //                  ((Real)dist6(rng)/1000.0-0.5) / 2.0 *  0.5 * dx,
+    //                  ((Real)dist6(rng)/1000.0-0.5) / 2.0 *  0.5 * dx};
+			
+    //   Real3 _perturb{((Real)dist6(rng)/1000.0-0.5) / 2.0 * 0.5 *  dx,
+    //                   (Real)0.0,
+    //                  ((Real)dist6(rng)/1000.0-0.5) / 2.0 *  0.5 * dx};
+
+			Real3 _perturb{0,0,0};
+
+			Real3 posToAdd{x0 + dx * (Real)i,
+                 	       y0 + dx * (Real)j,
+                     	   z0 + dx * (Real)k};
+
+
+		    // posToAdd = add(posToAdd,_perturb);
+
+			// Real3 posToAdd{x0 + dx * (Real)i, y0 + dx * (Real)j, z0 + dx * (Real)k};
 			mass.push_back(0);
 			vol.push_back(0);
 			pos.push_back(posToAdd);
+      		perturb.push_back(_perturb);
 			vel.push_back(getv0());
 			acc.push_back(zeroVector);
 			dens.push_back(getRho0());
 			densdot.push_back(0);
 			densGrad.push_back(zeroVector);
 			tempGrad.push_back(zeroVector);
-      normalVec.push_back(zeroVector);
+      		normalVec.push_back(zeroVector);
 
-      isFS.push_back(0);
-      curvature.push_back(0);
+      		isFS.push_back(0);
+      		curvature.push_back(0);
 			L.push_back(zeromat);
 			L2.push_back(zeromat);
 
-      temp.push_back(getT0());
+			// if(posToAdd[1] < EPSL_SMALL){
+			//   temp.push_back(2000.0);
+			// } else{
+			//   temp.push_back(getT0());
+			// }
+			// temp.push_back( posToAdd[0] *  posToAdd[0]);
+			temp.push_back( 2000.0 * posToAdd[0] * posToAdd[0] );
+			// temp.push_back( sin(posToAdd[0] * 3.141592) * sin(posToAdd[2] * 3.141592));
+			// temp.push_back( 2000.0 * posToAdd[0] / 50.0E-6 + 2000.0 * posToAdd[1] / 50.0E-6  );
+			// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
+
 			enthalpy.push_back(0);
 			enthalpydot.push_back(0);
 			type.push_back("Fluid");
@@ -396,6 +451,9 @@ void ParticleAttributes::fluidInit(){
 			n += 1;
 
 		}}}
+		// pos[0] = Real3{0,0,0}; temp[0] = 2000.0;
+		// pos[pos.size()-1] = Real3{50.0E-6,0,0}; temp[temp.size()-1] = 0;
+
 
 		std::cout << "Initialized Block of " << n << " Particles from input file.\n\n" << std::endl;
 	} else if (parDataIn["geometry"]["type"] == "pointCloud"){

@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <random>
 #include <omp.h>
 #include "helpers.hpp"
 #include "csv.hpp"
@@ -22,6 +23,7 @@ public:
 	std::vector<Real>  vol;
 	std::vector<Real> mass;
 	std::vector<Real3> pos;
+	std::vector<Real3> perturb;
 	std::vector<Real3> vel;
 	std::vector<Real3> acc;
 	std::vector<Real3> force;

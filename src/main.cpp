@@ -7,7 +7,7 @@
 #include "sphsolver.hpp"
 #include "particleAttrib.hpp"
 #include "filewriter.hpp"
-#include "poissonsample.hpp"
+#include "geometrygeneration.hpp"
 
 using json = nlohmann::json;
 using namespace CompactNSearch;
@@ -18,15 +18,18 @@ int main ( void ){
 	std::map<std::string,ParticleAttributes*> pData;
 
 	json simDataInput, fluidDataInput, boundaryDataInput;
+	std::cout << ">>> Reading system parameters." << std::endl;
 	readJSON(simDataInput,      "../inputs/constants.json");
+	std::cout << ">>> Reading fluid Data." << std::endl;
 	readJSON(fluidDataInput,    "../inputs/fluid.json");
+	std::cout << ">>> Reading boundary Data." << std::endl;
 	readJSON(boundaryDataInput, "../inputs/boundary.json");
 
 	if( simDataInput["operation"] == "SPHSimulation" ){
 		std::cout << ">>> Operation : SPHSimulation" << std::endl;
 
 		pData["fluid"] = new ParticleAttributes(simDataInput, fluidDataInput);
-		pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
+		// pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
 
 		std::cout << ">>> End of Particle Definition." << std::endl;
 
@@ -35,7 +38,8 @@ int main ( void ){
 
 		SPHSolver solver(simDataInput, pData);
 
-		writer.write(pData,simDataInput["smoothingLength"]);
+		// std::cout << ">>> Writing Initial Configuration (t=0)" << std::endl;
+		// writer.write(pData,simDataInput["smoothingLength"]);
 
 		std::cout << ">>> Timestep start" << std::endl;
 
@@ -44,14 +48,12 @@ int main ( void ){
 				solver.neighborSearch();
 				solver.marchTime(t);
 
-				if (t > (Uint)simDataInput["outputStart"]){
-
-				if (t % (Uint)simDataInput["outper"] == 0)
+				if (t >= (Uint)simDataInput["outputStart"]){
+					// std::cout << "asdf : " << (t+1) % ((Uint)simDataInput["outper"]) << std::endl;
+				if ((t+1) % ((Uint)simDataInput["outper"]) == 0)
 					writer.write(pData,simDataInput["smoothingLength"]);
-
-				if (t % (Uint)simDataInput["newfileper"] == ((Uint)simDataInput["newfileper"] - 1))
+				if (t % (Uint)simDataInput["newfileper"] == ((Uint)simDataInput["newfileper"]))
 					writer.openNextFile();
-
 				}
 
 				std::cout << "End of timestep : " << t << std::endl;
@@ -60,36 +62,9 @@ int main ( void ){
 		writer.close();
 
 	} else if ( simDataInput["operation"] == "GeometryGeneration" ){
+		std::cout << "MODE: Geometry Generation mode." << std::endl;
+		GeometryGeneration::generateGeometry(simDataInput);
 
-		Real r = simDataInput["dropletRadius"];
-		Real3 center = Real3{(Real)simDataInput["dropletCenter"][0],(Real)simDataInput["dropletCenter"][1],(Real)simDataInput["dropletCenter"][2]};
-		Real3 x_min = sub(center,mult(r,Real3{1.0,1.0,1.0}));
-		Real3 x_max = add(center,mult(r,Real3{1.0,1.0,1.0}));
-		std::cout << "... Generating Initial Configuration..." << std::endl;
-
-		std::vector<Real3> samples = thinks::poissonDiskSampling(0.8 * (float)simDataInput["dx"], x_min, x_max);
-		std::vector<Real> x,y,z;
-
-		int totalParticles = 0;
-		for (int i = 0; i < samples.size(); i++ ){
-			if(length(sub(samples[i],center)) > r) continue;
-			x.push_back( samples[i][0] );
-			y.push_back( samples[i][1] );
-			z.push_back( samples[i][2] );
-			totalParticles ++;
-		}
-		std::string fname = simDataInput["geomOutputFile"].dump();
-		fname = fname.substr(1, fname.size()); fname = fname.substr(0, fname.size()-1);
-		H5PartFile* fileWriter = H5PartOpenFile(fname.c_str(),H5PART_WRITE);
-
-		H5PartSetStep(fileWriter,0);
-		H5PartSetNumParticles(fileWriter,totalParticles);
-
-		H5PartWriteDataFloat64(fileWriter,"x",&x[0]);
-		H5PartWriteDataFloat64(fileWriter,"y",&y[0]);
-		H5PartWriteDataFloat64(fileWriter,"z",&z[0]);
-		H5PartCloseFile(fileWriter);
-		std::cout << ">>> Geometry Generation Complete. Rejection Sampled to " << x.size() << " samples." << std::endl;
 	}
 
 	std::cout << ">>> Exiting Program." << std::endl;

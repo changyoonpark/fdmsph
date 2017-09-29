@@ -3,8 +3,9 @@ ssh
 scp folder to remote :
 
 tar -czvf fdmsph_deploy.tar.gz FDMSPH_DEPLOY
-scp -i "./FDMSPH/sph.pem" fdmsph_deploy.tar.gz ec2-54-219-186-234.us-west-1.compute.amazonaws.com
-:~/code
+scp -i "./FDMSPH/sph.pem" fdmsph_deploy.tar.gz ec2-54-215-213-8.us-west-1.compute.amazonaws.com:~/code
+scp -i "./FDMSPH/sph.pem" fdmsph_deploy.tar.gz ubuntu@ec2-54-219-181-27.us-west-1.compute.amazonaws.com:~/code
+
 
 3. in the directory :
 tar -xvzf fdmsph*.tar.gz
@@ -19,6 +20,8 @@ mkdir -p code
 sudo mount -t tmpfs -o size=45000M tmpfs code
 
 Prereq packages :
+HDF5 / H5Part Build instructions (single core):
+Install Eigen:
 
 sudo apt-get update &&
 sudo apt-get install git -y &&
@@ -28,29 +31,18 @@ sudo apt-get install cmake -y &&
 sudo apt-get install htop -y &&
 sudo apt-get install zlib1g-dev -y &&
 sudo apt-get install screen -y &&
-sudo apt-get install cmake-curses-gui
-
-HDF5 / H5Part Build instructions (single core):
-
-1. download and build hdf5.
-
+sudo apt-get install cmake-curses-gui &&
 wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.17/src/hdf5-1.8.17.tar.gz &&
 tar -xvf hdf5-1.8.17.tar.gz &&
 cd hdf5-1.8.17 &&
-./configure --prefix=/usr/local/hdf5 && sudo make && sudo make install
-
-2. download and build hd5part.
-
+./configure --prefix=/usr/local/hdf5 && sudo make && sudo make install &&
 wget https://codeforge.lbl.gov/frs/download.php/file/387/H5Part-1.6.6.tar.gz &&
 tar -xvzf H5Part-1.6.6.tar.gz &&
 cd H5Part-1.6.6 &&
-./configure --prefix=/usr/local/hdf5 && sudo make && sudo make install
-
----------------------------------------------------------------------------------------------
-3. Install Eigen
-
+./configure --prefix=/usr/local/hdf5 && sudo make && sudo make install &&
 cd /usr/local &&
 sudo hg clone https://bitbucket.org/eigen/eigen/
+
 
 Program Build Instructions :
 

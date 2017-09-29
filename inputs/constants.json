@@ -1,18 +1,21 @@
 {
-
-  "operation1" : "SPHSimulation",
-
-  "operation" : "GeometryGeneration",
-
-  "dropletRadius" : 0.00005,
-  "dropletCenter" : [0.0,0.0,0.000053],
-  "geomOutputFile" : "../inputs/droplet_dx_0.00005.h5part",
-
-  "outputFile" : "test_out",
-  "dimensions" : 3,
-  "extent" : [1,1,1],
-  "dx" : 0.0000025,
-  "smoothingLength" : 0.00000625,
+  "operation" : "SPHSimulation",
+  "operation1" : "GeometryGeneration",
+ 
+	"geometry" : {"type" : "line",
+		"lineStart" : [0,0,0],
+		"lineEnd" : [50.0E-6,0.0E-6,0.0E-6],
+		"numParticles" : 52,
+		"geomOutputFile" : "../inputs/1D_50.h5part"
+	},
+ 
+  "outputFile" : "henning_1D_constant_with_time_50",
+  "dimensions" : 1,
+  "dx" : 1.0E-6,
+  "smoothingLength" : 2.5E-6,
+  "1dx" : 0.02,
+  "1smoothingLength" : 0.05,
+  "IIFCoeff" : 50000.0,
   "EOS" : "Linear",
   "diffusionModel" : "DeltaSPH",
   "kernelType" : "Wendland_2h",
@@ -22,14 +25,13 @@
   "temperatureEnthalpyRelation" : "T=H",
   "viscosityFormulation" : "Shao",
   "pressureFormulation" : 3,
-  "bodyForce" : "Gravity",
+  "bodyForce" : "None",
   "delta" : 0.1,
-  "dt" : 0.0000000025,
-  "dt1" : 0.0000000000005,
+  "dt" : 1.0E-8,
   "outputStart" : 0,
-  "steps" : 500000,
-  "outper" : 50,
-  "newfileper" : 1000,
+  "steps" : 1000,
+  "outper" : 10,
+  "newfileper" : 10000000,
   "sensors" : [
     {"type" : "sensorZPlane",
      "coord" : 0.0}

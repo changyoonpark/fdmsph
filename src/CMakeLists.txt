@@ -9,6 +9,8 @@ add_executable(FDMSPH
     helpers.hpp
     filewriter.hpp
     poissonsample.hpp
+    geometrygeneration.cpp
+    geometrygeneration.hpp
 )
 
 target_link_libraries(FDMSPH CompactNSearch)

@@ -1,3 +1,6 @@
+#ifndef __FILEWRITER__
+#define __FILEWRITER__
+
 #include <H5Part.h>
 #include <iostream>
 #include "helpers.hpp"
@@ -13,7 +16,6 @@ class FileWriter{
 	unsigned int timeStep;
 	std::string outputSuffix;
 	std::string currentFileName;
-	std::vector<Real> mass,x,y,z,vx,vy,vz,dens,temp,heatSensed,fxSensed,fySensed,fzSensed,isSensor;
 
 public:
 	FileWriter(std::string outputFile){
@@ -37,8 +39,8 @@ public:
 	}
 	void write(std::map<std::string,ParticleAttributes*> &pData, Real smoothingLength){
 		int totalParticles = 0;
-		std::vector<Real> h,x,y,z,vx,vy,vz,dens,temp,heatSensed,fxSensed,fySensed,fzSensed,isSensor;
-		std::vector<Real> nx,ny,nz,isFS,tgx,tgy,tgz,curvature,hdot;
+		std::vector<double> h,x,y,z,vx,vy,vz,dens,temp,heatSensed,fxSensed,fySensed,fzSensed,isSensor;
+		std::vector<double> nx,ny,nz,isFS,tgx,tgy,tgz,curvature,hdot,px,py,pz,vol,mass;
 
 		for (const auto& dataType : pData) totalParticles += dataType.second->numParticles;
 		std::cout << "... Writing Results to " << currentFileName << std::endl;
@@ -47,6 +49,10 @@ public:
 		x.resize(totalParticles); vx.resize(totalParticles);
 		y.resize(totalParticles); vy.resize(totalParticles);
 		z.resize(totalParticles); vz.resize(totalParticles);
+
+		px.resize(totalParticles);
+		py.resize(totalParticles);
+		pz.resize(totalParticles);
 
 		isFS.resize(totalParticles);
 		curvature.resize(totalParticles);
@@ -61,9 +67,10 @@ public:
 		hdot.resize(totalParticles);
 
 		mass.resize(totalParticles);
+		vol.resize(totalParticles);
+
 		h.resize(totalParticles);
 		dens.resize(totalParticles); temp.resize(totalParticles);
-		std::cout << "foo" << std::endl;
 		isSensor.resize(totalParticles);
 		heatSensed.resize(totalParticles);
 		fxSensed.resize(totalParticles);
@@ -80,6 +87,10 @@ public:
 				y[i] = dataType.second->pos[i - idx][1]; vy[i] = dataType.second->vel[i - idx][1];
 				z[i] = dataType.second->pos[i - idx][2]; vz[i] = dataType.second->vel[i - idx][2];
 
+				px[i] = dataType.second->perturb[i - idx][0];
+				py[i] = dataType.second->perturb[i - idx][1];
+				pz[i] = dataType.second->perturb[i - idx][2];
+
 				nx[i] = dataType.second->normalVec[i - idx][0];
 				ny[i] = dataType.second->normalVec[i - idx][1];
 				nz[i] = dataType.second->normalVec[i - idx][2];
@@ -94,6 +105,7 @@ public:
 				curvature[i] = dataType.second->curvature[i - idx];
 				dens[i] = dataType.second->dens[i - idx];
 				mass[i] = dataType.second->mass[i - idx];
+				vol[i] = dataType.second->vol[i - idx]; 
 				h[i] = smoothingLength;
 				// dens[i] = dataType.second->tempGrad[i-idx][0];
 				// dens[i] = dataType.second->densdot[i-idx];
@@ -121,6 +133,11 @@ public:
 		H5PartWriteDataFloat64(fileWriter,"x",&x[0]);
 		H5PartWriteDataFloat64(fileWriter,"y",&y[0]);
 		H5PartWriteDataFloat64(fileWriter,"z",&z[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"px",&px[0]);
+		H5PartWriteDataFloat64(fileWriter,"py",&py[0]);
+		H5PartWriteDataFloat64(fileWriter,"pz",&pz[0]);
+
 		H5PartWriteDataFloat64(fileWriter,"vx",&vx[0]);
 		H5PartWriteDataFloat64(fileWriter,"vy",&vy[0]);
 		H5PartWriteDataFloat64(fileWriter,"vz",&vz[0]);
@@ -137,6 +154,8 @@ public:
 
 		H5PartWriteDataFloat64(fileWriter,"dens",&dens[0]);
 		H5PartWriteDataFloat64(fileWriter,"mass",&mass[0]);
+		H5PartWriteDataFloat64(fileWriter,"vol",&vol[0]);
+
 		H5PartWriteDataFloat64(fileWriter,"h",&h[0]);
 		H5PartWriteDataFloat64(fileWriter,"temp",&temp[0]);
 		H5PartWriteDataFloat64(fileWriter,"heatSensed",&heatSensed[0]);
@@ -149,3 +168,5 @@ public:
 		}
 
 };
+
+#endif

@@ -1,16 +1,20 @@
 {
 	"type" : "Fluid",
 	"rho0" : 1000.0,
-	"T0" : 100.0,
+	"T0" : 0,
 	"mu" : 0.0003,
-	"soundSpeed" : 50.0,
-	"specificHeat" : 4000.0,
+	"soundSpeed" : 450.0,
+	"specificHeat" : 1000.0,
 	"surfaceTensionCoeff" : 0.059,
-	"thermalConductivity" : 0.6,
+	"thermalConductivity" : 15.0,
 	"thermalExpansion" : 0,
-	"v0"   : [0,0,-10],
+	"v0"   : [0,0,0],
+	"geometry1" : {"type" : "block",
+					"begin" : [0.0,0.0,0.0],
+					"end" : [50.0E-6,0.0,0.0],
+					"includeBoundary" : "True"},
 	"geometry" : {
-			"type" : "pointCloud",
-			"file" : "../inputs/droplet_dx_0.00005.h5part"
-			}
+		"type" : "pointCloud",
+		"file" : "../inputs/1D_50.h5part" 
+	}					
 }

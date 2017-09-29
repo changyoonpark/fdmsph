@@ -1,14 +1,12 @@
 #include "sphsolver.hpp"
 
-#define ZERO6X6 {{0,0,0,0,0,0},{0,0,0,0,0,0},{0,0,0,0,0,0},{0,0,0,0,0,0},{0,0,0,0,0,0},{0,0,0,0,0,0}}
 
 SPHSolver::SPHSolver(const json& _simData, std::map<std::string,ParticleAttributes*>& _pData)
  : simData(_simData), pData(_pData)
 {
 
 // Generate Particle Atrribution Arrays for the fluid
-	nsearch = new NeighborhoodSearch(simData["smoothingLength"],true);
-
+	nsearch = new NeighborhoodSearch((Real)simData["smoothingLength"] + EPSL_SMALL,true);
 // load the particlesets onto the nsearcher
 	std::cout << " ***** Initializing SPH Solver *****" << std::endl;
 
@@ -78,17 +76,22 @@ void SPHSolver::initializeMass(){
 					if ( dist > smoothingLength ) continue;
 
 					Real3  relvel = sub(pData[setName_i]->vel[i],pData[setName_j]->vel[j]);
-					Real3  reldir = div(relpos,dist);
+					Real3  reldir = divide(relpos,dist);
 
 					Real      Wij =  W_ij(dist, smoothingLength);
 					kernelSum += Wij;
 				}
 
 			}
-			kernelSum += W_ij(0,smoothingLength);
-
-			pData[setName_i]->vol[i]  = (1./kernelSum);
+			kernelSum += W_ij(0.0,smoothingLength);
+			pData[setName_i]->normalVec[i][0] = (Real)ps_i.n_neighbors(ids["fluid"],i);			
+			pData[setName_i]->vol[i]  = (1.0/kernelSum);
+			// pData[setName_i]->vol[i]  =  9.391435E-17;
 			pData[setName_i]->mass[i] =  pData[setName_i]->dens[i] * pData[setName_i]->vol[i];
+
+
+      // For Debugging.
+      // pData[setName_i]->temp[i] = pData[setName_i]->pos[i][2] * pData[setName_i]->pos[i][2] * 0.5;
 
 		}
   }
@@ -185,7 +188,7 @@ void SPHSolver::setKernels(){
 			std::cout << "--- Kernel Type : Wendland (2D)" << std::endl;
 			W_ij  =  W_Wendland_2D;
 			gW_ij = gW_Wendland_2D;
-		} else{
+		} else if (simData["dimensions"] == 3){
 			std::cout << "--- Kernel Type : Wendland (3D)" << std::endl;
 			W_ij  =  W_Wendland_3D_2h;
 			gW_ij = gW_Wendland_3D_2h;
@@ -195,12 +198,26 @@ void SPHSolver::setKernels(){
 			std::cout << "--- Kernel Type : Wendland (2D, 2h version)" << std::endl;
 			W_ij  =  W_Wendland_2D_2h;
 			gW_ij = gW_Wendland_2D_2h;
-		} else{
+			gW_ij_nd = gW_Wendland_2D_2h_Nondim; 			
+		} else if (simData["dimensions"] == 3){
 			std::cout << "--- Kernel Type : Wendland (3D, 2h version)" << std::endl;
 			W_ij  =  W_Wendland_3D_2h;
 			gW_ij = gW_Wendland_3D_2h;
+			gW_ij_nd = gW_Wendland_3D_2h_Nondim; 			
+		} else{
+			std::cout << "--- Kernel Type : Wendland (1D, 2h version)" << std::endl;
+			W_ij  =  W_Wendland_1D_2h;
+			gW_ij = gW_Wendland_1D_2h;
+			gW_ij_nd = gW_Wendland_1D_2h_Nondim; 						
 		}
-	} else{
+	} else if (simData["kernelType"] == "Quintic_Spline"){
+		if (simData["dimensions"] == 3){
+			std:: cout << "--- Kernel Type : Quintic Spline (3D, h version)" << std::endl;
+			W_ij  = W_QuinticSpline_3D;
+			gW_ij = gW_QuinticSpline_3D;
+		}
+	} 
+	else{
 		assert(0 && "!!! Unimplemented Kernel Type.");
 	}
 }
@@ -211,7 +228,7 @@ void SPHSolver::setBodyForce(){
 		bodyForceAcc_i = gravity_acc;
 	} else if (simData["bodyForce"] == "None"){
 		std::cout << "--- Body Force Type : None" << std::endl;
-		bodyForceAcc_i = [](){return Real3{0,0,0};};
+		bodyForceAcc_i = [](){return Real3{0.0,0.0,0.0};};
 	} else{
 		assert(1 && "!!! Unimplemented BodyForce Type.");
 	}
@@ -281,11 +298,17 @@ void SPHSolver::computeInteractions(){
 	const Real dx = (Real) simData["dx"];
 	const Uint dims = simData["dimensions"];
 	const Real smoothingLength = (Real) simData["smoothingLength"];
+	
 	VectorXd neg_delta_mn(6);
 	neg_delta_mn(0) = -1.0;	neg_delta_mn(1) = -1.0;	neg_delta_mn(2) = -1.0;
-	neg_delta_mn(3) = 0.0; neg_delta_mn(4) = 0.0; neg_delta_mn(5) = 0.0;
+	neg_delta_mn(3) =  0.0; neg_delta_mn(4) =  0.0; neg_delta_mn(5) =  0.0;
 
-	const Real3 zerovec{0,0,0};
+	Real3 neg_delta_mn_2D = Real3{-1.0,  // (0,0)
+		-1.0,  // (2,2)
+		   0}; // (0,2)
+
+
+	const Real3 zerovec{0.0,0.0,0.0};
 	const Real3x3 zeromat{zerovec,zerovec,zerovec};
 
 	std::cout << "		|------ ... Performing Fluid - (Fluid / Boundary) Interactions"<< std::endl;
@@ -301,37 +324,33 @@ void SPHSolver::computeInteractions(){
 			Real  rho_i  = pData[setName_i]->dens[i];
 
 			// Renormalization Tensor (First Derivative)
+			MatrixXd _L_i(3,3); _L_i = MatrixXd::Zero(3,3);
 			Real3x3& L_i = pData[setName_i]->L[i];
 			L_i = zeromat;
+			
 			// Renormalization Tensor (Second Derivative)
-			SymTensor3 A_i_kmn;
-			MatrixXd G(6,6); G = MatrixXd::Zero(6,6);
+			MatrixXd _Q_i(6,6); _Q_i = MatrixXd::Zero(6,6);
 			Real3x3& L2_i = pData[setName_i]->L2[i];
 			L2_i = zeromat;
 
-
+			// Renormalization Tensor (Second Derivative)
+			SymTensor3 A_i_kmn;
+			MatrixXd G(6,6); G = MatrixXd::Zero(6,6);
+			// Real3x3 G = zeromat;
 
 			// Normalized Temperature Gradient
 			pData[setName_i]->tempGrad[i] = zerovec;
 			// Renormalized Density Gradient.
 			pData[setName_i]->densGrad[i] = zerovec;
-      // Renormalized Color Gradient.
-      pData[setName_i]->normalVec[i] = zerovec;
 
 			// Clear the time derivatives.ff
-			pData[setName_i]->acc[i] = Real3{0,0,0};
-			pData[setName_i]->densdot[i] = 0;
-			pData[setName_i]->enthalpydot[i] = 0;
-
-			// Initialize the temperature wrt to the enthalpy.
-			// pData[setName_i]->temp[i] = TvsH(pData[setName_i]->enthalpy[i]);
-
+			pData[setName_i]->acc[i] = Real3{0.0,0.0,0.0};
+			pData[setName_i]->densdot[i] = 0.0;
+			pData[setName_i]->enthalpydot[i] = 0.0;
 
 			// FIRST PHASE.
 
 			// Compute the Renormalization Matrix / density gradient using the renormalization matrix.
-			// L_i is the renormalization matrix for the first derivative.
-			// A_i_knm is the third order tensor used for calculating the laplacian normalizer.
 			for (const auto& setName_j : setNames){
 
 				const int setID_j = ids[setName_j];
@@ -348,54 +367,43 @@ void SPHSolver::computeInteractions(){
 					Real     dist = length(relpos);
 
 					if ( dist > smoothingLength ) continue;
-
-					Real3  reldir = div(relpos,dist);
+					Real3  reldir = divide(relpos,dist);
 					Real    vol_j = pData[setName_j]->vol[j];
-          Real      Wij = W_ij(dist, smoothingLength);
+          			Real      Wij = W_ij(dist, smoothingLength);
 					Real3    gWij = gW_ij(dist, reldir, smoothingLength);
+					
 
+          			Real3x3 v_j_gWij_rij = mult(- vol_j,tensorProduct(gWij,relpos));
 					// Compute First derivative Renormalization Tensor
-					L_i = add(L_i,mult(- vol_j,tensorProduct(gWij,relpos)));
+					L_i = add(L_i, v_j_gWij_rij);
 					// Compute Renormalized Density Gradient
 					pData[setName_i]->densGrad[i]  = add(pData[setName_i]->densGrad[i], mult((rho_j - rho_i) * vol_j,gWij));
-					pData[setName_i]->tempGrad[i]  = add(pData[setName_i]->tempGrad[i], mult((pData[setName_j]->temp[j] - pData[setName_i]->temp[i]) * vol_j,gWij));
-          pData[setName_i]->normalVec[i] = add(pData[setName_i]->normalVec[i],mult(vol_j,gWij));
+					pData[setName_i]->tempGrad[i]  = add(pData[setName_i]->tempGrad[i], mult( (pData[setName_j]->temp[j] - pData[setName_i]->temp[i]) * vol_j, gWij));
+
 				}
 			}
 
 
-
 			// Compute the inverse of the renormalization tensor.
-			if (dims == 2){
-				L_i[1][0] = 0; L_i[1][1] = 1.0; L_i[1][2] = 0; L_i[2][1] = 0;
-			}
-      // checkSingularity(L_i);
+			setDims(L_i,dims);
 
-			L_i = inv(L_i);
-      MatrixXd _L_i(3,3); assign(_L_i,L_i);
-      VectorXcd eigs_im = _L_i.eigenvalues(); VectorXd eigs = eigs_im.real();
-      Real lambda = maxEig(eigs);
-
-
-			// This is <\nabla rho_i>, used for delta-SPH
+			toMatrix3d(L_i,_L_i);
+			JacobiSVD<MatrixXd> svd_L_i(_L_i);
+			Real cond_first_i = svd_L_i.singularValues()(0) / svd_L_i.singularValues()(svd_L_i.singularValues().size()-1);		
+			pData[setName_i]->isFS[i] = cond_first_i;
+			_L_i = _L_i.inverse();
+			toReal3x3(_L_i,L_i);
+			
+			// if(cond_first_i < 100.0){
 			pData[setName_i]->densGrad[i]  = mult(L_i,pData[setName_i]->densGrad[i]);
-			// This is <\nabla T_i>, used for normalized heat transfer
 			pData[setName_i]->tempGrad[i]  = mult(L_i,pData[setName_i]->tempGrad[i]);
-      // This is the normal vector.
+			// }
 
-      if (lambda > 1.5){
-        pData[setName_i]->isFS[i] = 1.0;
-        pData[setName_i]->normalVec[i] = mult(L_i,pData[setName_i]->normalVec[i]);
-        pData[setName_i]->normalVec[i] = dir(pData[setName_i]->normalVec[i]);
-      } else{
-        pData[setName_i]->normalVec[i] = zerovec;
-      }
 
-			// SECOND PHASE.
-			// Compute the Renormalization Tensor for the Laplacian.
-			// Referenced from "Error Estimation in Smoothed Particle Hydrodynamics and a New Scheme for Second Derivatives", Fatehi et al.
+
+
 			for (const auto& setName_j : setNames){
-
+				
 				const int setID_j = ids[setName_j];
 				const auto& ps_j = nsearch->point_set(setID_j);
 
@@ -411,10 +419,14 @@ void SPHSolver::computeInteractions(){
 					Real3x3&  L_i = pData[setName_i]->L[i];
 					if ( dist > smoothingLength ) continue;
 
-					Real3  reldir = div(relpos,dist);
+					Real3  reldir = divide(relpos,dist);
 					Real    vol_j = pData[setName_j]->vol[j];
 					Real3    gWij = gW_ij(dist, reldir, smoothingLength);
 
+					if ( dist < EPSL_SMALL2){
+						reldir = Real3{0,0,0};
+						gWij = Real3{0,0,0};
+					}
 					// Compute Second derivative Renormalization Tensor
 					for(int k = 0; k < 3; k ++) for(int m = 0; m < 3; m ++) for(int n = 0; n < 3; n ++){
 						for(int q = 0; q < 3; q++){
@@ -423,12 +435,39 @@ void SPHSolver::computeInteractions(){
 					}
 
 				}
+
 			}
 
 
-			// THIRD PHASE.
-			// Compute the matrix for inversion for the second derivative renormalization tensor.
-			// Referenced from "Error Estimation in Smoothed Particle Hydrodynamics and a New Scheme for Second Derivatives", Fatehi et al.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 			for (const auto& setName_j : setNames){
 
 				const int setID_j = ids[setName_j];
@@ -446,34 +485,102 @@ void SPHSolver::computeInteractions(){
 					Real3x3&  L_i = pData[setName_i]->L[i];
 					if ( dist > smoothingLength ) continue;
 
-					Real3  reldir = div(relpos,dist);
+					Real3  reldir = divide(relpos,dist);
 					Real    vol_j = pData[setName_j]->vol[j];
 					Real3    gWij = gW_ij(dist, reldir, smoothingLength);
 
-					// Compute Second derivative Renormalization Tensor
-					for(int I = 0; I < 6; I ++){
+					for ( Uint I = 0; I < 6; I++){
+						
 						Uint m = IDXPAIR[I][0], n = IDXPAIR[I][1];
-						for(int J = 0; J < 6; J ++){
+						Real Nij_mn = (A_i_kmn(0,m,n) * reldir[0] + A_i_kmn(1,m,n) * reldir[1] + A_i_kmn(2,m,n) * reldir[2]) + relpos[m] * reldir[n];
+						// truncate1(Nij_mn);
+						for ( Uint J = 0; J < 6; J++){
+							
 							Uint o = IDXPAIR[J][0], p = IDXPAIR[J][1];
-							Real A_kI_ek = 0;
-							for(int k = 0 ;k < 3; k++) A_kI_ek += A_i_kmn(k,m,n) * reldir[k];
+							Real Mij_op = reldir[o] * gWij[p];
+							Real Mij_po = reldir[p] * gWij[o];
+
 							if (o == p){
-								G(I,J) +=  (A_kI_ek + relpos[m] * reldir[n]) * (reldir[o] * gWij[p]) * vol_j;
+								G(I,J) = G(I,J) + Nij_mn * Mij_op * vol_j;
 							} else{
-								G(I,J) +=  (A_kI_ek + relpos[m] * reldir[n]) * (reldir[o] * gWij[p] + reldir[p] * gWij[o]) * vol_j;
-							}
+								G(I,J) = G(I,J) + Nij_mn * (Mij_op + Mij_po) * vol_j;
+							}	
 
 						}
 					}
-
+					
 				}
 			}
-			// std::cout << G << std::endl;
-			// std::cout << "---------\n\n" << std::endl;
-			L2_i = toReal3x3(G.colPivHouseholderQr().solve(neg_delta_mn));
+
+			// const Uint IDXPAIR[6][2] = {{0,0},{1,1},{2,2},{0,1},{1,2},{0,2}};
+			if(dims == 2){
+				G(2,2) = 1.0; G(4,4) = 1.0; G(5,5) = 1.0;
+			} else if(dims == 1){
+				G(1,1) = 1.0; G(2,2) = 1.0;
+				G(3,3) = 1.0; G(4,4) = 1.0;
+				G(5,5) = 1.0;
+			}
+
+			VectorXd L2_i_vec = G.fullPivLu().solve(neg_delta_mn);
+			L2_i = toReal3x3From6(L2_i_vec,dims);
+			setDims2(L2_i,dims);
+											
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 		}
-	}
+
+	} 
 
 
 
@@ -487,34 +594,29 @@ void SPHSolver::computeInteractions(){
 			const Real&   m_i = pData[setName_i]->mass[i];
 			const Real& rho_i = pData[setName_i]->dens[i];
 			const Real&   T_i = pData[setName_i]->temp[i];
-      const Real& vol_i = pData[setName_i]->vol[i];
+      		const Real& vol_i = pData[setName_i]->vol[i];
 			const Real&   k_i = thermalConductivity(pData[setName_i]->getType(),
 				  							 T_i);
 
-			const Real&   P_i = EOS(T_i,   pData[setName_i]->getT0(),
-							 rho_i, pData[setName_i]->getRho0(),
-							 	    pData[setName_i]->getSoundSpeed(),
-							 	    pData[setName_i]->getThermalExpansion());
+			const Real&   P_i = EOS(T_i, pData[setName_i]->getT0(),
+									     rho_i, pData[setName_i]->getRho0(),
+									     pData[setName_i]->getSoundSpeed(),
+										 pData[setName_i]->getThermalExpansion());
+											
 			const Real3& tempGrad_i = pData[setName_i]->tempGrad[i];
 			const Real3& densGrad_i = pData[setName_i]->densGrad[i];
-      const Real3& normal_i =  pData[setName_i]->normalVec[i];
+	        const Real3& normal_i =  pData[setName_i]->normalVec[i];
 			const Real3x3& L2_i = pData[setName_i]->L2[i];
-
-
-      Real& curvature = pData[setName_i]->curvature[i];
-      curvature = 0;
-      Real curvatureCorrection = (vol_i) * W_ij(0, smoothingLength);
-
+			const Real& cond_i = pData[setName_i]->isFS[i];
 
 			bool isSensor_i   = (pData[setName_i]->isSensor[i]);
-      bool isFS_i = (pData[setName_i]->isFS[i]);
 			bool isBoundary_i = (setName_i == "boundary") ? true : false;
 
 			for (const auto& setName_j : setNames){
 				const int setID_j = ids[setName_j];
 				const auto& ps_j = nsearch->point_set(setID_j);
 				const bool isBoundary_j = (setName_j == "boundary") ? true : false;
-
+				
 				// Loop over the neighbors of particl i in the indexed particle set.
 				for (int _j = 0; _j < ps_i.n_neighbors(setID_j,i); _j++){
 
@@ -525,18 +627,21 @@ void SPHSolver::computeInteractions(){
 					Real3 relposj = mult(-1.0,relpos);
 
 					Real     dist = length(relpos);
-					if ( dist > smoothingLength ) continue;
-
+					if ( dist > smoothingLength) continue;
+					
 					const Real&      m_j = pData[setName_j]->mass[j];
 					const Real&    vol_j = pData[setName_j]->vol[j];
-          const Real3& normal_j =  pData[setName_j]->normalVec[j];
-          Real   rho_i_temp, rho_j_temp;
+					const Real3& normal_j =  pData[setName_j]->normalVec[j];
+					const Real3& tempGrad_j = pData[setName_j]->tempGrad[j];
+
+					Real   rho_i_temp, rho_j_temp;
 
 					Real3  relvel = sub(pData[setName_i]->vel[i],pData[setName_j]->vel[j]);
-					Real3  reldir = div(relpos,dist);
+					Real3  reldir = divide(relpos,dist);
 
 					Real      Wij =  W_ij(dist,         smoothingLength);
 					Real3    gWij = gW_ij(dist, reldir, smoothingLength);
+					Real3    gWij_nd = gW_ij_nd(dist, reldir, smoothingLength);
 					Real    rho_j = pData[setName_j]->dens[j];
 					Real3 densGrad_j = pData[setName_j]->densGrad[j];
 					Real   	  T_j = pData[setName_j]->temp[j];
@@ -549,8 +654,6 @@ void SPHSolver::computeInteractions(){
 
 					Real   	  k_j = thermalConductivity(pData[setName_j]->getType(),
 														T_j);
-
-          bool isFS_j = (pData[setName_j]->isFS[j]);
 
 					// Continuity : update the density for the fluid particles.
 					// Continuity : update the density for the boundary particles.
@@ -568,26 +671,32 @@ void SPHSolver::computeInteractions(){
 					// Actual density of the boundary material, to account for the correct thermal diffusivity.
 					rho_i_temp = isBoundary_i ? pData[setName_i]->getMaterialDensity() : rho_i ;
 					rho_j_temp = isBoundary_j ? pData[setName_j]->getMaterialDensity() : rho_j ;
+					
 
-					Real heat = heatTransfer(L2_i,tempGrad_i,
-											 T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
-											 relpos, reldir,
-											 dist, gWij, vol_j);
-
-
+					// If the laplacian corrector cannot be defined, use the conventional operator.
+					Real heat;
+					// if (cond_i < 100.0){
+						heat = consistentHeatTransfer(L2_i,tempGrad_i,
+													  T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
+													  relpos, reldir,
+													  dist, gWij, vol_j);
+					// } else{
+						// heat = inconsistentHeatTransfer(tempGrad_i, tempGrad_j,
+						// 				    			T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
+						// 				    			relpos, reldir,
+						// 				 				dist, gWij, vol_j);		
+					// }
 					pData[setName_i]->enthalpydot[i] += heat;
 
 
 					// If the particle is not a boundary particle, accumulate the momentum contribution.
 					if (!isBoundary_i){
-					// Acceleration Due to pressure gradient.
+					  // Acceleration Due to pressure gradient.
 						Real3 a = add(pressureAcc_ij(m_j,gWij,P_i,P_j,rho_i,rho_j,vol_j), viscosityAcc_ij(m_j, relpos, gWij, rho_i, rho_j,dist, relvel, mu_j));
-						pData[setName_i]->acc[i]      = add(pData[setName_i]->acc[i], a);
-            // If particle i and particle j are both free-surface particles, add the surface tension contribution.
-            if(isFS_i && isFS_j){
-              curvature += (vol_j) * dot(sub(normal_j, normal_i), gWij);
-              curvatureCorrection += (vol_j) * Wij;
-            }
+            			// Interparticle forces, (IFF surface tension model).
+            			a = add(a, iif_acc(simData["IIFCoeff"], reldir, dist, smoothingLength, m_i, m_j));
+
+						pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i], a);
 
 					}
 
@@ -604,88 +713,25 @@ void SPHSolver::computeInteractions(){
 
 			}
 
-      curvature = curvature / curvatureCorrection;
 
-      // // For debugging only
-      // pData[setName_i]->curvature[i] = pData[setName_i]->enthalpydot[i];
-      // Acceleration Due to Surface Tension. Apply only to Free-surface particles.
-      // pData[setName_i]->enthalpydot[i] =
-      if (isFS_i && isBoundary_i){
-        pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i],
-          mult(- (pData[setName_i]->getSurfaceTensionCoeff() / m_i) * curvature,normal_i)
-        );
-      }
-			// Acceleration Due to Body Force. Apply only to non-boundary particles.
+			// if( dims != 1 ){
+				// pData[setName_i]->enthalpydot[i] = pData[setName_i]->enthalpydot[i] * ((7.0/(4.0*M_PI))/(smoothingLength*smoothingLength*smoothingLength));
+			// } else {
+				// pData[setName_i]->enthalpydot[i] = pData[setName_i]->enthalpydot[i] * (-0.625 / (smoothingLength*smoothingLength)); 
+			// }
+
 			if (!isBoundary_i){
 				pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i],bodyForceAcc_i());
 			} else{
 				pData[setName_i]->acc[i] = zerovec;
 				pData[setName_i]->vel[i] = zerovec;
 			}
+			
 
 		}
 
 
 	}
-
-
-
-
-
-
-
-
-  //
-  //
-  // std::cout << "--- *Smoothing out* temperature field." << std::endl;
-  // for (const auto& setName_i : setNames){
-  //
-  //   const int setID_i = ids[setName_i];
-  //   const auto& ps_i = nsearch->point_set(setID_i);
-  //   // Real totmass = 0;
-  //   for (int i = 0; i < ps_i.n_points(); ++i){
-  //     Real T_xsph = 0.;
-  //     const Real T_i = pData[setName_i]->enthalpydot[i];
-  //     const Real rho_i = pData[setName_i]->dens[i];
-  //     for (const auto& setName_j : setNames){
-  //
-  //       const int setID_j = ids[setName_j];
-  //       const auto& ps_j = nsearch->point_set(setID_j);
-  //
-  //       for (int _j = 0; _j < ps_i.n_neighbors(setID_j,i); _j++){
-  //         Uint const j = ps_i.neighbor(setID_j, i, _j);
-  //
-  //         const Real3  relpos = sub(pData[setName_i]->pos[i],pData[setName_j]->pos[j]);
-  //         const Real     dist = length(relpos);
-  //
-  //         if ( dist > smoothingLength ) continue;
-  //
-  //         const Real3  relvel = sub(pData[setName_i]->vel[i],pData[setName_j]->vel[j]);
-  //         const Real3  reldir = div(relpos,dist);
-  //         const Real      m_j = pData[setName_j]->mass[j];
-  //         const Real      Wij =  W_ij(dist, smoothingLength);
-  //         const Real T_j = pData[setName_j]->enthalpydot[j];
-  //         const Real rho_j = pData[setName_j]->dens[j];
-  //
-  //         // XSPH correction for the temperature Field
-  //         T_xsph += 0.3 * m_j * (T_j - T_i) / ( 0.5 * (rho_i + rho_j) ) * Wij;
-  //       }
-  //
-  //     }
-  //     pData[setName_i]->enthalpydot[i]  += T_xsph;
-  //   }
-  // }
-
-
-
-
-
-
-
-
-
-
-
 
 
 }
@@ -707,34 +753,28 @@ void SPHSolver::marchTime(Uint t){
 		// Fluid Particles    : march the position, velocity, density.
 			#pragma omp parallel for num_threads(NUMTHREADS)
 			for (int i = 0; i < ps.n_points(); ++i){
-				pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(dt * 0.5,pData[setName]->acc[i]));
-				pData[setName]->pos[i]  = add(pData[setName]->pos[i], mult(dt,pData[setName]->vel[i]));
+				// pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(dt * 0.5,pData[setName]->acc[i]));
+				// pData[setName]->pos[i]  = add(pData[setName]->pos[i], mult(dt,pData[setName]->vel[i]));
 
-				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
-				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
+				// pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
+
+				if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
+				// if(pData[setName]->pos[i][0] > 1.0E-8){
+					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] * 15.0 / (7900.0 * 450.0);					
+					// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
+				} 
+
 			}
 		} else if (setName == "boundary"){
 		// Boundary Particles : march the density only.
 			#pragma omp parallel for num_threads(NUMTHREADS)
 			for (int i = 0; i < ps.n_points(); ++i){
 				pData[setName]->dens[i] = pData[setName]->dens[i]  + dt * 0.5 * pData[setName]->densdot[i];
-				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
+				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / (pData[setName]->getSpecificHeat());
 			}
 		}
 
 	}
-
-//  Forward Euler. (For Debugging)
-	// for (const auto& setName : setNames){
-	// 	const int setID = ids[setName];
-	// 	const auto& ps = nsearch->point_set(setID);
-	// 	if( setName == "fluid"){
-	// 		#pragma omp parallel for num_threads(NUMTHREADS)
-	// 		for (int i = 0; i < ps.n_points(); ++i){
-	// 			pData[setName]->temp[i] = pData[setName]->temp[i] + dt * pData[setName]->enthalpydot[i];
-	// 		}
-	// 	}
-	// }
 
 	std::cout << "	|--- Calculating Interatctions" << std::endl;
 	computeInteractions();
@@ -750,19 +790,26 @@ void SPHSolver::marchTime(Uint t){
 		// Fluid Particles    : march the position, velocity, density.
 			#pragma omp parallel for num_threads(NUMTHREADS)
 			for (int i = 0; i < ps.n_points(); ++i){
-				pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(0.5 * dt,pData[setName]->acc[i]));
+				// pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(0.5 * dt,pData[setName]->acc[i]));
 
-				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
-				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
+				// pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
+				// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
 
+				if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
+				// if(pData[setName]->pos[i][0] > 1.0E-8){					
+					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] * 15.0 / (7900.0 * 450.0);
+					// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
+				} 
+
+				// if(pData[setName]->temp[i] > pData[setName]->getT0()) pData[setName]->temp[i] = pData[setName]->getT0();
 			}
+
 		} else if (setName == "boundary"){
 		// Boundary Particles : march the density only.
 			#pragma omp parallel for num_threads(NUMTHREADS)
 			for (int i = 0; i < ps.n_points(); ++i){
 				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
 				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
-
 			}
 		}
 
@@ -773,3 +820,131 @@ void SPHSolver::marchTime(Uint t){
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		// 	Unused code, formulation from Fatehi et al. Very sensitive with numerical precision.
+		// 	Tensor4 Q_i, R_i;
+		// 	Tensor3 S_i, P_i;
+		// 	for (const auto& setName_j : setNames){
+
+		// 		const int setID_j = ids[setName_j];
+		// 		const auto& ps_j = nsearch->point_set(setID_j);
+
+		// 		for (int _j = 0; _j < ps_i.n_neighbors(setID_j,i); _j++){
+
+		// 			// Index of neighbor particle in setID_j
+		// 			Uint const j = ps_i.neighbor(setID_j, i, _j);
+
+		// 			// Define all the ingedients for the particle interaction
+		// 			Real    rho_j = pData[setName_j]->dens[j];
+		// 			Real3  relpos = sub(pData[setName_i]->pos[i],pData[setName_j]->pos[j]);
+		// 			Real     dist = length(relpos);
+
+		// 			if ( dist > smoothingLength) continue;
+		// 			Real3  reldir = divide(relpos,dist);
+		// 			Real    vol_j = pData[setName_j]->vol[j];
+        //   			Real      Wij = W_ij(dist, smoothingLength);
+		// 			Real3    gWij = gW_ij(dist, reldir, smoothingLength);
+
+		// 			for (int m=0;m<3;m++) for(int n=0;n<3;n++) for(int o=0;o<3;o++) for(int p=0;p<3;p++)
+		// 				R_i(m,n,o,p) = R_i(m,n,o,p) + vol_j * relpos[m] * reldir[n] * reldir[o] * gWij[p];
+
+		// 			for (int m=0;m<3;m++) for(int n=0;n<3;n++) for(int k=0;k<3;k++)
+		// 				S_i(m,n,k) = S_i(m,n,k) + vol_j * reldir[m] * reldir[n] * gWij[k];
+					
+		// 			for (int l=0;l<3;l++) for(int o=0;o<3;o++) for(int p=0;p<3;p++)
+		// 				P_i(l,o,p) = P_i(l,o,p) + vol_j * relpos[l] * relpos[o] * gWij[p];
+		// 		}
+		// 	}
+
+
+		// 	contract_323_to_4(S_i,L_i,P_i,Q_i);
+
+
+		// 	Q_i.add(R_i);
+
+
+			
+
+		// 	for(int I=0;I<6;I++){
+		// 		Uint m = IDXPAIR[I][0]; Uint n = IDXPAIR[I][1];
+		// 		for(int J=0;J<6;J++){
+		// 			Uint o = IDXPAIR[J][0]; Uint p = IDXPAIR[J][1];
+		// 			_Q_i(I,J) = Q_i(m,n,o,p);
+		// 		}
+		// 	}
+		// 	if(i == 1300){
+		// 		std::cout << "before" << std::endl;
+		// 		std::cout << _Q_i << std::endl;
+		// 	}
+
+		// 	if(dims == 2){
+		// 		_Q_i(2,2) = 1.0; _Q_i(4,4) = 1.0; _Q_i(5,5) = 1.0;
+		// 	} else if (dims == 1){
+		// 		_Q_i(1,1) = 1.0; _Q_i(2,2) = 1.0; _Q_i(3,3) = 1.0; _Q_i(4,4) = 1.0; _Q_i(5,5) = 1.0;		
+		// 	}
+
+		// 	JacobiSVD<MatrixXd> svd_L2_i(_Q_i);
+		// 	Real cond_second_i = svd_L2_i.singularValues()(0) / svd_L2_i.singularValues()(svd_L2_i.singularValues().size()-1);		
+		// 	pData[setName_i]->isFS[i] = cond_second_i;			
+
+		// 	L2_i = toReal3x3(_Q_i.fullPivLu().solve(neg_delta_mn));
+			
