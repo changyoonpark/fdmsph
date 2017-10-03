@@ -43,11 +43,12 @@ Here are some examples. Random sphere uses a poisson sampler, which not might be
 		"origin" : [0,0,0],
 		"length" : 50.0E-6,
 		"radius" : 2.5E-6,
-		"nr" : 10,
-		"nd" : 10,
-			"geomOutputFile" : "../inputs/1D_50.h5part"
-		},
-
+		"nr1" : 1,
+		"nd1" : 15,
+		"nr" : 1,
+		"nd" : 15,
+		"geomOutputFile" : "../inputs/3D_100.h5part"
+	},
 
 	"geometry" : {"type" : "line",
 		"start" : [0,0,0],

@@ -93,27 +93,30 @@ namespace GeometryGeneration{
 		}
     }
 
-    void uniformCylinder(Real3 origin, Real length, Real radius, Uint nr, Uint n2, Real dx,
+    void uniformCylinder(Real3 origin, Real length, Real radius, Uint nr, Uint nd, Real dx,
                         std::vector<Real>& x,
                         std::vector<Real>& y,
                         std::vector<Real>& z){
         Real pi = 3.141592;
         std::vector<Real3> pos;
+        Real circum_thick = radius / (Real)nr;
         pos.push_back(origin);
-        for (Uint i=1;i<nr;i++){
-            Uint ntheta = (Uint) (( 2.0 * pi * i * dx) / dx + 0.5);
+        for (Uint i=1;i<=nr;i++){
+            Uint ntheta = (Uint) (( 2.0 * pi * i * circum_thick) / circum_thick + 0.5);
             for (Uint j=0;j<ntheta;j++){
                 Real dTheta = 2.0 * pi / ntheta;
-                Real3 direction = Real3{0,cos(dTheta * j),cos(dTheta * j)};
-                Real radius = (i * dx);
+                Real3 direction = Real3{0,cos(dTheta * j),sin(dTheta * j)};
+                Real radius = (i * circum_thick);
                 pos.push_back(add(origin,mult(radius,direction)));
             }
         }
-        
-        for (Uint i=0;i<pos.size();i++){
-            x.push_back(pos[i][0]);
-            y.push_back(pos[i][1]);
-            z.push_back(pos[i][2]);
+        Real thick = (Real)(length / (Real)(nd-1));
+        for (Uint layer = 0; layer < nd; layer ++){
+            for (Uint i=0;i<pos.size();i++){
+                x.push_back(pos[i][0] + thick * layer);
+                y.push_back(pos[i][1]);
+                z.push_back(pos[i][2]);
+            }
         }
     }
 
@@ -151,7 +154,7 @@ namespace GeometryGeneration{
             if(totalParticles >= n) break;
 		}
         
-        for (int j = 0; j < 55; j++){
+        for (int j = 0; j < 20; j++){
 
             std::mt19937 rng;
             rng.seed(std::random_device()());
@@ -162,7 +165,7 @@ namespace GeometryGeneration{
             
         }
         
-        for (int j = 0; j < 55; j++){
+        for (int j = 0; j < 20; j++){
             
             std::mt19937 rng;
             rng.seed(std::random_device()());

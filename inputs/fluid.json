@@ -15,6 +15,6 @@
 					"includeBoundary" : "True"},
 	"geometry" : {
 		"type" : "pointCloud",
-		"file" : "../inputs/3D_100.h5part" 
+		"file" : "../inputs/3D_1500.h5part" 
 	}
 }

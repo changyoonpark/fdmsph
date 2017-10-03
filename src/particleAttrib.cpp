@@ -53,14 +53,14 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
     	normalVec.push_back(zeroVector);
 
     // temp.push_back(getT0());
-		temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
+		// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
 	
     // Quick Hack..
-		// if (posToAdd[0] < EPSL_SMALL2){
-		// temp.push_back(2000.0);
-		// } else{
-		// temp.push_back(getT0());
-		// }
+		if (posToAdd[0] < EPSL_SMALL2){
+		temp.push_back(2000.0);
+		} else{
+		temp.push_back(getT0());
+		}
 
 
     	isFS.push_back(0);

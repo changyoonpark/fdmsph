@@ -388,9 +388,9 @@ void SPHSolver::computeInteractions(){
 			setDims(L_i,dims);
 
 			toMatrix3d(L_i,_L_i);
-			JacobiSVD<MatrixXd> svd_L_i(_L_i);
-			Real cond_first_i = svd_L_i.singularValues()(0) / svd_L_i.singularValues()(svd_L_i.singularValues().size()-1);		
-			pData[setName_i]->isFS[i] = cond_first_i;
+			// JacobiSVD<MatrixXd> svd_L_i(_L_i);
+			// Real cond_first_i = svd_L_i.singularValues()(0) / svd_L_i.singularValues()(svd_L_i.singularValues().size()-1);		
+			// pData[setName_i]->isFS[i] = cond_first_i;
 			_L_i = _L_i.inverse();
 			toReal3x3(_L_i,L_i);
 			
@@ -521,6 +521,11 @@ void SPHSolver::computeInteractions(){
 				G(5,5) = 1.0;
 			}
 
+			
+			JacobiSVD<MatrixXd> svd_G_i(G);
+			Real cond_second_i = svd_G_i.singularValues()(0) / svd_G_i.singularValues()(svd_G_i.singularValues().size()-1);		
+			pData[setName_i]->isFS[i] = cond_second_i;			
+			
 			VectorXd L2_i_vec = G.fullPivLu().solve(neg_delta_mn);
 			L2_i = toReal3x3From6(L2_i_vec,dims);
 			setDims2(L2_i,dims);
@@ -675,16 +680,16 @@ void SPHSolver::computeInteractions(){
 
 					// If the laplacian corrector cannot be defined, use the conventional operator.
 					Real heat;
-					// if (cond_i < 100.0){
+					// if (cond_i < 100){
 						heat = consistentHeatTransfer(L2_i,tempGrad_i,
 													  T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
 													  relpos, reldir,
 													  dist, gWij, vol_j);
 					// } else{
 						// heat = inconsistentHeatTransfer(tempGrad_i, tempGrad_j,
-						// 				    			T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
-						// 				    			relpos, reldir,
-						// 				 				dist, gWij, vol_j);		
+					// 					    			T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
+					// 					    			relpos, reldir,
+					// 					 				dist, gWij, vol_j);		
 					// }
 					pData[setName_i]->enthalpydot[i] += heat;
 

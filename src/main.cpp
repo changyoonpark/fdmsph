@@ -16,7 +16,7 @@ int main ( void ){
 
 	std::cout << ">>> Starting Program." << std::endl;
 	std::map<std::string,ParticleAttributes*> pData;
-
+	std::cout << "asdf" << std::endl;
 	json simDataInput, fluidDataInput, boundaryDataInput;
 	std::cout << ">>> Reading system parameters." << std::endl;
 	readJSON(simDataInput,      "../inputs/constants.json");
