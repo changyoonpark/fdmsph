@@ -317,7 +317,7 @@ void SPHSolver::computeInteractions(){
 		const int setID_i = ids[setName_i];
 		const auto& ps_i = nsearch->point_set(setID_i);
 
-		#pragma omp parallel for num_threads(NUMTHREADS)
+		// #pragma omp parallel for num_threads(NUMTHREADS)
 		for (int i = 0; i < ps_i.n_points(); ++i){
 
 			Real    m_i  = pData[setName_i]->mass[i];
@@ -524,10 +524,22 @@ void SPHSolver::computeInteractions(){
 			
 			JacobiSVD<MatrixXd> svd_G_i(G);
 			Real cond_second_i = svd_G_i.singularValues()(0) / svd_G_i.singularValues()(svd_G_i.singularValues().size()-1);		
+			// std::cout << "condition number : " << cond_second_i << std::endl;
+			// std::cout << "(x,x)" << G.eigenvalues()(0) << std::endl;
+			// std::cout << "(y,y)" << G.eigenvalues()(1) << std::endl;
+			// std::cout << "(z,z)" << G.eigenvalues()(2) << std::endl;
+			// std::cout << "(x,y)" << G.eigenvalues()(3) << std::endl;
+			// std::cout << "(y,z)" << G.eigenvalues()(4) << std::endl;
+			// std::cout << "(x,z)" << G.eigenvalues()(5) << std::endl;
+			
 			pData[setName_i]->isFS[i] = cond_second_i;			
 			
 			VectorXd L2_i_vec = G.fullPivLu().solve(neg_delta_mn);
 			L2_i = toReal3x3From6(L2_i_vec,dims);
+			// MatrixXd L2_i_Eigen(3,3);
+			
+			// toMatrix3d(L2_i,L2_i_Eigen);
+			// std::cout << L2_i_Eigen << std::endl;
 			setDims2(L2_i,dims);
 											
 
@@ -680,17 +692,17 @@ void SPHSolver::computeInteractions(){
 
 					// If the laplacian corrector cannot be defined, use the conventional operator.
 					Real heat;
-					// if (cond_i < 100){
+					if (cond_i < 100){
 						heat = consistentHeatTransfer(L2_i,tempGrad_i,
 													  T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
 													  relpos, reldir,
 													  dist, gWij, vol_j);
-					// } else{
-						// heat = inconsistentHeatTransfer(tempGrad_i, tempGrad_j,
-					// 					    			T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
-					// 					    			relpos, reldir,
-					// 					 				dist, gWij, vol_j);		
-					// }
+					} else{
+						heat = inconsistentHeatTransfer(tempGrad_i, tempGrad_j,
+										    			T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
+										    			relpos, reldir,
+										 				dist, gWij, vol_j);		
+					}
 					pData[setName_i]->enthalpydot[i] += heat;
 
 

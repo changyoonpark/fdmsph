@@ -8,7 +8,7 @@
 #include <math.h>
 #include "json.hpp"
 
-#define NUMTHREADS 36
+#define NUMTHREADS 4
 #define MAX_NEIGHBORS 200
 #define EPSL_SMALL 1.0E-10
 #define EPSL_SMALL2 1.0E-15
@@ -508,8 +508,8 @@ namespace RealOps{
 				  					     Real Ti, Real Tj, Real mj, Real rho_i, Real rho_j, Real ki, Real kj,
 									     Real3 relpos, Real3 reldir,
 									     Real dist, Real3 gWij, Real vol_j){
-		// return 2.0 * ((Ti-Tj) / dist) * dot(reldir,gWij) * vol_j;		
-		return dot(sub(gradT_j,gradT_i),gWij) * vol_j;		
+		return 2.0 * ((Ti-Tj) / dist) * dot(reldir,gWij) * vol_j;		
+		// return dot(sub(gradT_j,gradT_i),gWij) * vol_j;		
 	}
 	
 	inline Real consistentHeatTransfer(Real3x3 L2_i, Real3 gradT_i,
@@ -589,7 +589,6 @@ namespace RealOps{
 				data[i][j][k][l] = data[i][j][k][l] + b(i,j,k,l);			
 		}
 		
-
 	};		 
 
 
