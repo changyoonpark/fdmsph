@@ -19,6 +19,6 @@
 	},
 	"geometry" : {
 		"type" : "JSONpointCloud",
-		"file" : "../inputs/sphere_214.json" 
+		"file" : "../inputs/sphere_941.json" 
 	}
 }

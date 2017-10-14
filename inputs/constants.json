@@ -9,7 +9,7 @@
     "numParticles" : 9400
   },
 
-  "outputFile" : "henning_beer_214",
+  "outputFile" : "henning_beer_941",
   "dimensions" : 3,
   "dx" : 8.42E-6,
 
@@ -20,7 +20,7 @@
   "smoothingLength941_3D" : 8.5E-6,
   "smoothingLength214_3D" : 16.5E-6,
 
-  "smoothingLength" : 15.0E-6,
+  "smoothingLength" : 8.5E-6,
   "1dx" : 0.02,
   "1smoothingLength" : 0.05,
   "IIFCoeff" : 50000.0,
@@ -37,8 +37,8 @@
   "delta" : 0.1,
   "dt" : 1.0E-9,
   "outputStart" : 0,
-  "steps" : 1E5,
-  "outper" : 100,
+  "steps" : 10,
+  "outper" : 1,
   "newfileper" : 10000000,
   "sensors" : [
     {"type" : "sensorZPlane",
