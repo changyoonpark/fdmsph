@@ -1,7 +1,7 @@
 {
 	"type" : "Fluid",
 	"rho0" : 1000.0,
-	"T0" : 0,
+	"T0" : 300,
 	"mu" : 0.0003,
 	"soundSpeed" : 450.0,
 	"specificHeat" : 1000.0,
@@ -13,8 +13,12 @@
 					"begin" : [0.0,0.0,0.0],
 					"end" : [50.0E-6,0.0,0.0],
 					"includeBoundary" : "True"},
-	"geometry" : {
+	"geometry2" : {
 		"type" : "pointCloud",
-		"file" : "../inputs/3D_1500.h5part" 
+		"file" : "../inputs/3D_1500_random.h5part" 
+	},
+	"geometry" : {
+		"type" : "JSONpointCloud",
+		"file" : "../inputs/sphere_214.json" 
 	}
 }

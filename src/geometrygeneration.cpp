@@ -125,8 +125,8 @@ namespace GeometryGeneration{
                         std::vector<Real>& y, 
                         std::vector<Real>& z){
         // Only a cylinder that shares the axis with the y axis works..
-        Real3 x_min = sub(origin,mult(radius,Real3{1.0,0,1.0}));
-        Real3 x_max = add(x_min,Real3{2.0 * radius, length, 2.0 * radius});
+        Real3 x_min = sub(origin,mult(radius,Real3{0.0,1.0,1.0}));
+        Real3 x_max = add(x_min,Real3{length, 2.0 * radius, 2.0 * radius});
         std::map<Uint,bool> didUse;
         std::cout << "... Generating Initial Configuration (Random Cylinder) ..." << std::endl;
                             
@@ -141,7 +141,7 @@ namespace GeometryGeneration{
             Uint sampleIdx = dist(rng);
             Real3 sample = samples[sampleIdx];
 
-            if ( sample[0] * sample[0] + sample[2] * sample[2] > radius * radius ) continue;
+            if ( sample[1] * sample[1] + sample[2] * sample[2] > radius * radius ) continue;
             if (didUse.count(sampleIdx) != 0) continue;
 
             didUse[sampleIdx] = true;
@@ -154,27 +154,16 @@ namespace GeometryGeneration{
             if(totalParticles >= n) break;
 		}
         
-        for (int j = 0; j < 20; j++){
+        for (int j = 0; j < x.size(); j++){
 
-            std::mt19937 rng;
-            rng.seed(std::random_device()());
-            std::uniform_int_distribution<std::mt19937::result_type> dist(0,x.size()-1);
-            Uint idx = dist(rng);
-
-            y[idx] = 0;
-            
+            if(x[j] < radius * 0.2){
+                x[j] = 0.0;
+            }            
+            if(x[j] > length - radius * 0.2){
+                x[j] = length;
+            }
         }
         
-        for (int j = 0; j < 20; j++){
-            
-            std::mt19937 rng;
-            rng.seed(std::random_device()());
-            std::uniform_int_distribution<std::mt19937::result_type> dist(0,x.size()-1);
-            Uint idx = dist(rng);
-
-            y[idx] = length;
-                        
-        }
             
     }
 

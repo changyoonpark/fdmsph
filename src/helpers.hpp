@@ -8,7 +8,7 @@
 #include <math.h>
 #include "json.hpp"
 
-#define NUMTHREADS 4
+#define NUMTHREADS 24
 #define MAX_NEIGHBORS 200
 #define EPSL_SMALL 1.0E-10
 #define EPSL_SMALL2 1.0E-15

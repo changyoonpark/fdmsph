@@ -2,21 +2,25 @@
   "operation" : "SPHSimulation",
   "operation1" : "GeometryGeneration",
  
-	"geometry" : {"type" : "cylinder",
-    "origin" : [0,0,0],
-    "length" : 50.0E-6,
-    "radius" : 2.5E-6,
-    "numParticles" : 1500,
-    "geomOutputFile" : "../inputs/3D_1500_random.h5part"
+	"geometry" : {"type" : "sphere",
+    "dropletRadius" : 20.0E-6,
+    "dropletCenter" : [0.0,0.0,-20.0E-6],
+    "geomOutputFile" : "../inputs/sphere_random_940.h5part",
+    "numParticles" : 9400
   },
 
-  "outputFile" : "henning_3D_transient_with_time_1000",
+  "outputFile" : "henning_beer_214",
   "dimensions" : 3,
-  "dx" : 0.75E-6,
+  "dx" : 8.42E-6,
+
   "smoothingLength1500" : 2.1E-6,
   "smoothingLength250" : 3.9E-6,
   "smoothingLength100" : 5.3E-6,
-  "smoothingLength" : 2.1E-6,
+
+  "smoothingLength941_3D" : 8.5E-6,
+  "smoothingLength214_3D" : 16.5E-6,
+
+  "smoothingLength" : 15.0E-6,
   "1dx" : 0.02,
   "1smoothingLength" : 0.05,
   "IIFCoeff" : 50000.0,
@@ -33,8 +37,8 @@
   "delta" : 0.1,
   "dt" : 1.0E-9,
   "outputStart" : 0,
-  "steps" : 100,
-  "outper" : 1,
+  "steps" : 1E5,
+  "outper" : 100,
   "newfileper" : 10000000,
   "sensors" : [
     {"type" : "sensorZPlane",

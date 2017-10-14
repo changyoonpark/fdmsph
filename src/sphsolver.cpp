@@ -1,8 +1,9 @@
 #include "sphsolver.hpp"
 
 
-SPHSolver::SPHSolver(const json& _simData, std::map<std::string,ParticleAttributes*>& _pData)
- : simData(_simData), pData(_pData)
+SPHSolver::SPHSolver(json& _simData, std::map<std::string,ParticleAttributes*>& _pData)
+// SPHSolver::SPHSolver(const json& _simData, std::map<std::string,ParticleAttributes*>& _pData)
+: simData(_simData), pData(_pData)
 {
 
 // Generate Particle Atrribution Arrays for the fluid
@@ -53,6 +54,7 @@ void SPHSolver::initializeMass(){
 
 	std::cout << "--- Initializing particle volume / mass." << std::endl;
 	const Real smoothingLength = (Real) simData["smoothingLength"];
+	Real totVol = 0.0;
 
 	for (const auto& setName_i : setNames){
 
@@ -86,6 +88,7 @@ void SPHSolver::initializeMass(){
 			kernelSum += W_ij(0.0,smoothingLength);
 			pData[setName_i]->normalVec[i][0] = (Real)ps_i.n_neighbors(ids["fluid"],i);			
 			pData[setName_i]->vol[i]  = (1.0/kernelSum);
+			totVol += pData[setName_i]->vol[i];
 			// pData[setName_i]->vol[i]  =  9.391435E-17;
 			pData[setName_i]->mass[i] =  pData[setName_i]->dens[i] * pData[setName_i]->vol[i];
 
@@ -95,6 +98,7 @@ void SPHSolver::initializeMass(){
 
 		}
   }
+  simData["totalVolume"] = (Real)totVol;  
 
 }
 
@@ -317,7 +321,7 @@ void SPHSolver::computeInteractions(){
 		const int setID_i = ids[setName_i];
 		const auto& ps_i = nsearch->point_set(setID_i);
 
-		// #pragma omp parallel for num_threads(NUMTHREADS)
+		#pragma omp parallel for num_threads(NUMTHREADS)
 		for (int i = 0; i < ps_i.n_points(); ++i){
 
 			Real    m_i  = pData[setName_i]->mass[i];
@@ -692,7 +696,7 @@ void SPHSolver::computeInteractions(){
 
 					// If the laplacian corrector cannot be defined, use the conventional operator.
 					Real heat;
-					if (cond_i < 100){
+					if (cond_i < 10.0){
 						heat = consistentHeatTransfer(L2_i,tempGrad_i,
 													  T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
 													  relpos, reldir,
@@ -703,8 +707,18 @@ void SPHSolver::computeInteractions(){
 										    			relpos, reldir,
 										 				dist, gWij, vol_j);		
 					}
-					pData[setName_i]->enthalpydot[i] += heat;
 
+
+					// The Heat dumped from the beer-lambert source.
+					// PI * 
+					// R2 = (20.0E-6) * (20.0E-6)
+					// I(r) = 2.0 / (PI * R2) * exp(-2.0 * r * r / R2)
+					// beta = 3.0 * (1.0 - gamma) / (2.0 * gamma * 40.0E-6)
+					// I(z) = beta * (1.0 / (1.0 - exp(-beta * 40.0E-6))) * exp(-beta * z)
+					// A_r = 1.0 - 1.0 / exp(2.0)
+					// I_corr = eta * P * I(r) * I(z) * (PI * R2 * d / (volSum)) * A_r
+
+					pData[setName_i]->enthalpydot[i] += heat;
 
 					// If the particle is not a boundary particle, accumulate the momentum contribution.
 					if (!isBoundary_i){
@@ -736,6 +750,24 @@ void SPHSolver::computeInteractions(){
 			// } else {
 				// pData[setName_i]->enthalpydot[i] = pData[setName_i]->enthalpydot[i] * (-0.625 / (smoothingLength*smoothingLength)); 
 			// }
+			if(currentTime <= 10.0E-6){
+				
+				const Real R2 = (20.0E-6) * (20.0E-6);
+				const Real gamma = 0.48;
+				const Real P = 45.0;
+				const Real beta = 3.0 * (1.0 - gamma) / (2.0 * gamma * 40.0E-6);
+				const Real r2 = pData[setName_i]->pos[i][0] * pData[setName_i]->pos[i][0] + pData[setName_i]->pos[i][1] * pData[setName_i]->pos[i][1];
+				const Real I_r = 2.0 / (PI * R2) * std::exp(-2.0 * r2 / R2);
+				const Real z = 40.0E-6 - pData[setName_i]->pos[i][2];
+				const Real I_z = beta * (1.0 / (1.0 - std::exp(-beta * 40.0E-6))) * std::exp(-beta * z);
+				const Real A_r = 1.0 - 1.0 / std::exp(2.0);
+				const Real I_corr = 1.0 * P * I_r * I_z * (PI * R2 * 20.0E-6 / ((Real)simData["totalVolume"])) * A_r;
+
+				pData[setName_i]->enthalpydot[i] += I_corr * vol_i;
+				pData[setName_i]->normalVec[i][1] = I_corr * vol_i;
+
+			}
+							
 
 			if (!isBoundary_i){
 				pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i],bodyForceAcc_i());
@@ -755,10 +787,12 @@ void SPHSolver::computeInteractions(){
 
 
 
+
 void SPHSolver::marchTime(Uint t){
 	using namespace RealOps;
 
 	std::cout << "-------------------- Timestep #" << t << std::endl;
+	currentTime += ((Real)t+1.0) * (Real) simData["dt"];
 	const Real dt = (Real) simData["dt"];
 	const Real dx = (Real) simData["dx"];
 	for (const auto& setName : setNames){

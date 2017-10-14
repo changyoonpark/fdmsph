@@ -459,6 +459,56 @@ void ParticleAttributes::fluidInit(){
 	} else if (parDataIn["geometry"]["type"] == "pointCloud"){
 		std::string fileName = parDataIn["geometry"]["file"];
 		readInitialPlacement(fileName);
+	} else if (parDataIn["geometry"]["type"] == "JSONpointCloud"){
+		std::string fileName = parDataIn["geometry"]["file"];
+		json pointCloud;
+		readJSON(pointCloud, fileName);
+		const Real3 zeroVector{0,0,0};
+		const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};		
+		Uint n = 0;
+		for(int i = 0; i < pointCloud.size(); i++){
+			std::cout << pointCloud[i] << std::endl;
+			Real3 posToAdd{pointCloud[i]["x"],pointCloud[i]["y"],pointCloud[i]["z"]};
+			mass.push_back(0);
+			vol.push_back(0);
+			perturb.push_back(zeroVector);
+			pos.push_back(posToAdd);
+			vel.push_back(getv0());
+			acc.push_back(zeroVector);
+			dens.push_back(getRho0());
+			densdot.push_back(0);
+			densGrad.push_back(zeroVector);
+			tempGrad.push_back(zeroVector);
+			normalVec.push_back(zeroVector);
+	
+			temp.push_back(getT0());
+			// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
+		
+		// Quick Hack..
+			// if (posToAdd[0] < EPSL_SMALL2){
+			// temp.push_back(2000.0);
+			// } else{
+			// temp.push_back(getT0());
+			// }
+	
+	
+			isFS.push_back(0);
+			curvature.push_back(0);
+
+			L.push_back(zeromat);
+			L2.push_back(zeromat);
+	
+			enthalpy.push_back(0);
+			enthalpydot.push_back(0);
+			type.push_back("Fluid");
+			force.push_back(zeroVector);
+			isSensor.push_back(false);
+			heatSensed.push_back(0);
+			forceSensed.push_back(zeroVector);
+			numParticles+=1;
+			n+=1;			
+		}
+		std::cout << "Initialized " << n << " Particles from JSON input file.\n\n" << std::endl;		
 	}
 
 }

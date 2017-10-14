@@ -19,13 +19,17 @@ using Uint = unsigned int;
 
 class SPHSolver{
 public:
-	const json& simData;
+	// const json& simData;
+	json& simData;
 
 	std::map<std::string,ParticleAttributes*>& pData;
 	std::vector<std::string> setNames;
 	NeighborhoodSearch* nsearch;
 
-	SPHSolver(const json& _simData, std::map<std::string,ParticleAttributes*>& pData);
+	Real currentTime;
+
+	SPHSolver(json& _simData, std::map<std::string,ParticleAttributes*>& pData);
+	// SPHSolver(const json& _simData, std::map<std::string,ParticleAttributes*>& pData);
 	void neighborSearch();
 	void marchTime(Uint t);
 
