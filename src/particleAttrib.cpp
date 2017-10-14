@@ -466,6 +466,7 @@ void ParticleAttributes::fluidInit(){
 		const Real3 zeroVector{0,0,0};
 		const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};		
 		Uint n = 0;
+		numParticles = 0;		
 		for(int i = 0; i < pointCloud.size(); i++){
 			std::cout << pointCloud[i] << std::endl;
 			Real3 posToAdd{pointCloud[i]["x"],pointCloud[i]["y"],pointCloud[i]["z"]};
@@ -505,6 +506,7 @@ void ParticleAttributes::fluidInit(){
 			isSensor.push_back(false);
 			heatSensed.push_back(0);
 			forceSensed.push_back(zeroVector);
+			
 			numParticles+=1;
 			n+=1;			
 		}
