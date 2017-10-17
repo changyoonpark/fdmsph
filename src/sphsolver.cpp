@@ -10,7 +10,7 @@ SPHSolver::SPHSolver(json& _simData, std::map<std::string,ParticleAttributes*>& 
 	nsearch = new NeighborhoodSearch((Real)simData["smoothingLength"] + EPSL_SMALL,true);
 // load the particlesets onto the nsearcher
 	std::cout << " ***** Initializing SPH Solver *****" << std::endl;
-
+	currentTime = 0.0;
 	for (const auto& pDatEntry : pData){
 		ids[pDatEntry.first] = nsearch->add_point_set( pDatEntry.second->pos.front().data(), pDatEntry.second->pos.size(), true, true);
 		std::cout << "... Particle set \"" << pDatEntry.first << "\" with " << pDatEntry.second->numParticles << " Particles Set Loaded onto CompactNSearch." << std::endl;
@@ -718,7 +718,7 @@ void SPHSolver::computeInteractions(){
 					// A_r = 1.0 - 1.0 / exp(2.0)
 					// I_corr = eta * P * I(r) * I(z) * (PI * R2 * d / (volSum)) * A_r
 
-					pData[setName_i]->enthalpydot[i] += heat;
+					pData[setName_i]->enthalpydot[i] += heat * 15.0 / (7900.0 * 450.0);
 
 					// If the particle is not a boundary particle, accumulate the momentum contribution.
 					if (!isBoundary_i){
@@ -750,22 +750,23 @@ void SPHSolver::computeInteractions(){
 			// } else {
 				// pData[setName_i]->enthalpydot[i] = pData[setName_i]->enthalpydot[i] * (-0.625 / (smoothingLength*smoothingLength)); 
 			// }
-			if(currentTime <= 10.0E-6){
+			if( currentTime <= 10.0E-6 ){
 				
 				const Real R2 = (20.0E-6) * (20.0E-6);
 				const Real gamma = 0.48;
-				const Real P = 45.0;
+				const Real P = 15.0;
 				const Real beta = 3.0 * (1.0 - gamma) / (2.0 * gamma * 40.0E-6);
 				const Real r2 = pData[setName_i]->pos[i][0] * pData[setName_i]->pos[i][0] + pData[setName_i]->pos[i][1] * pData[setName_i]->pos[i][1];
 				const Real I_r = 2.0 / (PI * R2) * std::exp(-2.0 * r2 / R2);
 				const Real z = 40.0E-6 - pData[setName_i]->pos[i][2];
 				const Real I_z = beta * (1.0 / (1.0 - std::exp(-beta * 40.0E-6))) * std::exp(-beta * z);
 				const Real A_r = 1.0 - 1.0 / std::exp(2.0);
-				const Real I_corr = 1.0 * P * I_r * I_z * (PI * R2 * 20.0E-6 / ((Real)simData["totalVolume"])) * A_r;
+				const Real I_corr = 1.0 * P * I_r * I_z * (PI * R2 * 40.0E-6 / ((Real)simData["totalVolume"])) * A_r;
+				pData[setName_i]->enthalpydot[i] += I_corr / (7900.0 * 450.0);
+				pData[setName_i]->normalVec[i][1] = I_corr;
 
-				pData[setName_i]->enthalpydot[i] += I_corr * vol_i;
-				pData[setName_i]->normalVec[i][1] = I_corr * vol_i;
-
+			} else{
+				pData[setName_i]->normalVec[i][1] = 0.0;
 			}
 							
 
@@ -792,7 +793,7 @@ void SPHSolver::marchTime(Uint t){
 	using namespace RealOps;
 
 	std::cout << "-------------------- Timestep #" << t << std::endl;
-	currentTime += ((Real)t+1.0) * (Real) simData["dt"];
+	currentTime += (Real) simData["dt"];
 	const Real dt = (Real) simData["dt"];
 	const Real dx = (Real) simData["dx"];
 	for (const auto& setName : setNames){
@@ -809,11 +810,11 @@ void SPHSolver::marchTime(Uint t){
 
 				// pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
 
-				if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
+				// if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
 				// if(pData[setName]->pos[i][0] > 1.0E-8){
-					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] * 15.0 / (7900.0 * 450.0);					
+					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
 					// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
-				} 
+				// } 
 
 			}
 		} else if (setName == "boundary"){
@@ -846,11 +847,11 @@ void SPHSolver::marchTime(Uint t){
 				// pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
 				// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
 
-				if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
+				// if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
 				// if(pData[setName]->pos[i][0] > 1.0E-8){					
-					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] * 15.0 / (7900.0 * 450.0);
+					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];
 					// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
-				} 
+				// } 
 
 				// if(pData[setName]->temp[i] > pData[setName]->getT0()) pData[setName]->temp[i] = pData[setName]->getT0();
 			}
