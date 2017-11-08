@@ -29,7 +29,7 @@ int main ( void ){
 		std::cout << ">>> Operation : SPHSimulation" << std::endl;
 
 		pData["fluid"] = new ParticleAttributes(simDataInput, fluidDataInput);
-		// pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
+		pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
 
 		std::cout << ">>> End of Particle Definition." << std::endl;
 

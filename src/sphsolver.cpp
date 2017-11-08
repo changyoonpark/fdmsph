@@ -7,10 +7,11 @@ SPHSolver::SPHSolver(json& _simData, std::map<std::string,ParticleAttributes*>& 
 {
 
 // Generate Particle Atrribution Arrays for the fluid
-	nsearch = new NeighborhoodSearch((Real)simData["smoothingLength"] + EPSL_SMALL,true);
+	nsearch = new NeighborhoodSearch((double)simData["smoothingLength"],true);
 // load the particlesets onto the nsearcher
 	std::cout << " ***** Initializing SPH Solver *****" << std::endl;
 	currentTime = 0.0;
+
 	for (const auto& pDatEntry : pData){
 		ids[pDatEntry.first] = nsearch->add_point_set( pDatEntry.second->pos.front().data(), pDatEntry.second->pos.size(), true, true);
 		std::cout << "... Particle set \"" << pDatEntry.first << "\" with " << pDatEntry.second->numParticles << " Particles Set Loaded onto CompactNSearch." << std::endl;
@@ -18,11 +19,30 @@ SPHSolver::SPHSolver(json& _simData, std::map<std::string,ParticleAttributes*>& 
 		setNames.push_back(pDatEntry.first);
 	}
 
+	// Uint min = 99999;
+	// for (int i=0;i<pData["fluid"]->pos.size();i++){
+	// 	Uint neighs = 0;
+	// 	for (int j=0;j<pData["fluid"]->pos.size();j++){
+	// 		if (length(sub(pData["fluid"]->pos[i],pData["fluid"]->pos[j])) <= (Real)simData["smoothingLength"] && i != j){
+	// 			neighs += 1;
+	// 		}			
+	// 	}
+	// 	if (neighs < min){
+	// 		std::cout << "new min neighs : " << min << std::endl;
+	// 		min = neighs;
+	// 	}
+	// }
+
+
 	totParticles = 0;
+	Uint numSets = 0;
+
 	for (const auto& pSet : nsearch->point_sets()){
 		totParticles += pSet.n_points();
+		numSets += 1;
 	}
 
+	std::cout << "... Loaded " << totParticles << " particles, with " << numSets << " point sets." << std::endl;
 
 	// Set the SPH model.
 	std::cout << "... defining models for SPH" << std::endl;
@@ -89,12 +109,7 @@ void SPHSolver::initializeMass(){
 			pData[setName_i]->normalVec[i][0] = (Real)ps_i.n_neighbors(ids["fluid"],i);			
 			pData[setName_i]->vol[i]  = (1.0/kernelSum);
 			totVol += pData[setName_i]->vol[i];
-			// pData[setName_i]->vol[i]  =  9.391435E-17;
 			pData[setName_i]->mass[i] =  pData[setName_i]->dens[i] * pData[setName_i]->vol[i];
-
-
-      // For Debugging.
-      // pData[setName_i]->temp[i] = pData[setName_i]->pos[i][2] * pData[setName_i]->pos[i][2] * 0.5;
 
 		}
   }
@@ -275,7 +290,22 @@ void SPHSolver::setPressureGradientFormulation(){
 void SPHSolver::neighborSearch(){
 
 	std::cout << "... Searching Neighbors" << std::endl;
+
+
+
 	auto t0 = std::chrono::high_resolution_clock::now();
+
+	// for (const auto& setName_i : setNames){
+		
+	// 			const int setID_i = ids[setName_i];
+	// 			const auto& ps_i = nsearch->point_set(setID_i);
+		
+	// 			for (int i = 0; i < ps_i.n_points(); ++i){		
+	// 				Real3 pos_i  = pData[setName_i]->pos[i];
+	// 				std::cout << pos_i[0] << ", " << pos_i[1] << ", " << pos_i[2] << std::endl;
+	// 			}
+	// }
+
 	nsearch->find_neighbors();
 	std::cout << "--- Neighborhood search took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t0).count() << "ms" << std::endl;
 
@@ -308,8 +338,8 @@ void SPHSolver::computeInteractions(){
 	neg_delta_mn(3) =  0.0; neg_delta_mn(4) =  0.0; neg_delta_mn(5) =  0.0;
 
 	Real3 neg_delta_mn_2D = Real3{-1.0,  // (0,0)
-		-1.0,  // (2,2)
-		   0}; // (0,2)
+								  -1.0,  // (2,2)
+		   							 0}; // (0,2)
 
 
 	const Real3 zerovec{0.0,0.0,0.0};
@@ -392,16 +422,11 @@ void SPHSolver::computeInteractions(){
 			setDims(L_i,dims);
 
 			toMatrix3d(L_i,_L_i);
-			// JacobiSVD<MatrixXd> svd_L_i(_L_i);
-			// Real cond_first_i = svd_L_i.singularValues()(0) / svd_L_i.singularValues()(svd_L_i.singularValues().size()-1);		
-			// pData[setName_i]->isFS[i] = cond_first_i;
 			_L_i = _L_i.inverse();
 			toReal3x3(_L_i,L_i);
 			
-			// if(cond_first_i < 100.0){
 			pData[setName_i]->densGrad[i]  = mult(L_i,pData[setName_i]->densGrad[i]);
 			pData[setName_i]->tempGrad[i]  = mult(L_i,pData[setName_i]->tempGrad[i]);
-			// }
 
 
 
@@ -441,35 +466,6 @@ void SPHSolver::computeInteractions(){
 				}
 
 			}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 			for (const auto& setName_j : setNames){
@@ -516,7 +512,6 @@ void SPHSolver::computeInteractions(){
 				}
 			}
 
-			// const Uint IDXPAIR[6][2] = {{0,0},{1,1},{2,2},{0,1},{1,2},{0,2}};
 			if(dims == 2){
 				G(2,2) = 1.0; G(4,4) = 1.0; G(5,5) = 1.0;
 			} else if(dims == 1){
@@ -525,85 +520,18 @@ void SPHSolver::computeInteractions(){
 				G(5,5) = 1.0;
 			}
 
-			
 			JacobiSVD<MatrixXd> svd_G_i(G);
 			Real cond_second_i = svd_G_i.singularValues()(0) / svd_G_i.singularValues()(svd_G_i.singularValues().size()-1);		
-			// std::cout << "condition number : " << cond_second_i << std::endl;
-			// std::cout << "(x,x)" << G.eigenvalues()(0) << std::endl;
-			// std::cout << "(y,y)" << G.eigenvalues()(1) << std::endl;
-			// std::cout << "(z,z)" << G.eigenvalues()(2) << std::endl;
-			// std::cout << "(x,y)" << G.eigenvalues()(3) << std::endl;
-			// std::cout << "(y,z)" << G.eigenvalues()(4) << std::endl;
-			// std::cout << "(x,z)" << G.eigenvalues()(5) << std::endl;
 			
 			pData[setName_i]->isFS[i] = cond_second_i;			
 			
 			VectorXd L2_i_vec = G.fullPivLu().solve(neg_delta_mn);
 			L2_i = toReal3x3From6(L2_i_vec,dims);
-			// MatrixXd L2_i_Eigen(3,3);
-			
-			// toMatrix3d(L2_i,L2_i_Eigen);
-			// std::cout << L2_i_Eigen << std::endl;
 			setDims2(L2_i,dims);
-											
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 		}
 
 	} 
-
-
 
 	for (const auto& setName_i : setNames){
 
@@ -676,9 +604,6 @@ void SPHSolver::computeInteractions(){
 					Real   	  k_j = thermalConductivity(pData[setName_j]->getType(),
 														T_j);
 
-					// Continuity : update the density for the fluid particles.
-					// Continuity : update the density for the boundary particles.
-
 					// Delta SPH Diffusion
 					pData[setName_i]->densdot[i] += dot(mult(rho_i, relvel), gWij) * vol_j;
 					pData[setName_i]->densdot[i] += diffusiveTerm_ij(rho_i,rho_j,
@@ -708,21 +633,12 @@ void SPHSolver::computeInteractions(){
 										 				dist, gWij, vol_j);		
 					}
 
-
-					// The Heat dumped from the beer-lambert source.
-					// PI * 
-					// R2 = (20.0E-6) * (20.0E-6)
-					// I(r) = 2.0 / (PI * R2) * exp(-2.0 * r * r / R2)
-					// beta = 3.0 * (1.0 - gamma) / (2.0 * gamma * 40.0E-6)
-					// I(z) = beta * (1.0 / (1.0 - exp(-beta * 40.0E-6))) * exp(-beta * z)
-					// A_r = 1.0 - 1.0 / exp(2.0)
-					// I_corr = eta * P * I(r) * I(z) * (PI * R2 * d / (volSum)) * A_r
-
-					pData[setName_i]->enthalpydot[i] += heat * 15.0 / (7900.0 * 450.0);
-
+					// pData[setName_i]->enthalpydot[i] += heat * 15.0 / (7900.0 * 450.0);
+					pData[setName_i]->enthalpydot[i] += heat;
+					
 					// If the particle is not a boundary particle, accumulate the momentum contribution.
 					if (!isBoundary_i){
-					  // Acceleration Due to pressure gradient.
+ 					    // Acceleration Due to pressure gradient.
 						Real3 a = add(pressureAcc_ij(m_j,gWij,P_i,P_j,rho_i,rho_j,vol_j), viscosityAcc_ij(m_j, relpos, gWij, rho_i, rho_j,dist, relvel, mu_j));
             			// Interparticle forces, (IFF surface tension model).
             			a = add(a, iif_acc(simData["IIFCoeff"], reldir, dist, smoothingLength, m_i, m_j));
@@ -744,32 +660,7 @@ void SPHSolver::computeInteractions(){
 
 			}
 
-
-			// if( dims != 1 ){
-				// pData[setName_i]->enthalpydot[i] = pData[setName_i]->enthalpydot[i] * ((7.0/(4.0*M_PI))/(smoothingLength*smoothingLength*smoothingLength));
-			// } else {
-				// pData[setName_i]->enthalpydot[i] = pData[setName_i]->enthalpydot[i] * (-0.625 / (smoothingLength*smoothingLength)); 
-			// }
-			if( currentTime <= 10.0E-6 ){
-				
-				const Real R2 = (20.0E-6) * (20.0E-6);
-				const Real gamma = 0.48;
-				const Real P = 15.0;
-				const Real beta = 3.0 * (1.0 - gamma) / (2.0 * gamma * 40.0E-6);
-				const Real r2 = pData[setName_i]->pos[i][0] * pData[setName_i]->pos[i][0] + pData[setName_i]->pos[i][1] * pData[setName_i]->pos[i][1];
-				const Real I_r = 2.0 / (PI * R2) * std::exp(-2.0 * r2 / R2);
-				const Real z = 40.0E-6 - pData[setName_i]->pos[i][2];
-				const Real I_z = beta * (1.0 / (1.0 - std::exp(-beta * 40.0E-6))) * std::exp(-beta * z);
-				const Real A_r = 1.0 - 1.0 / std::exp(2.0);
-				const Real I_corr = 1.0 * P * I_r * I_z * (PI * R2 * 40.0E-6 / ((Real)simData["totalVolume"])) * A_r;
-				pData[setName_i]->enthalpydot[i] += I_corr / (7900.0 * 450.0);
-				pData[setName_i]->normalVec[i][1] = I_corr;
-
-			} else{
-				pData[setName_i]->normalVec[i][1] = 0.0;
-			}
-							
-
+						
 			if (!isBoundary_i){
 				pData[setName_i]->acc[i] = add(pData[setName_i]->acc[i],bodyForceAcc_i());
 			} else{
@@ -805,16 +696,11 @@ void SPHSolver::marchTime(Uint t){
 		// Fluid Particles    : march the position, velocity, density.
 			#pragma omp parallel for num_threads(NUMTHREADS)
 			for (int i = 0; i < ps.n_points(); ++i){
-				// pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(dt * 0.5,pData[setName]->acc[i]));
-				// pData[setName]->pos[i]  = add(pData[setName]->pos[i], mult(dt,pData[setName]->vel[i]));
 
-				// pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
-
-				// if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
-				// if(pData[setName]->pos[i][0] > 1.0E-8){
-					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
-					// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
-				// } 
+				pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(dt * 0.5,pData[setName]->acc[i]));
+				pData[setName]->pos[i]  = add(pData[setName]->pos[i], mult(dt,pData[setName]->vel[i]));
+				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
+				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
 
 			}
 		} else if (setName == "boundary"){
@@ -842,18 +728,9 @@ void SPHSolver::marchTime(Uint t){
 		// Fluid Particles    : march the position, velocity, density.
 			#pragma omp parallel for num_threads(NUMTHREADS)
 			for (int i = 0; i < ps.n_points(); ++i){
-				// pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(0.5 * dt,pData[setName]->acc[i]));
-
-				// pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
-				// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i] / pData[setName]->getSpecificHeat();
-
-				// if(pData[setName]->pos[i][0] > 1.0E-8 && pData[setName]->pos[i][0] < 50.0E-6 - 1.0E-8){
-				// if(pData[setName]->pos[i][0] > 1.0E-8){					
-					pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];
-					// pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];					
-				// } 
-
-				// if(pData[setName]->temp[i] > pData[setName]->getT0()) pData[setName]->temp[i] = pData[setName]->getT0();
+				pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(0.5 * dt,pData[setName]->acc[i]));
+				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
+				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];
 			}
 
 		} else if (setName == "boundary"){
@@ -866,70 +743,7 @@ void SPHSolver::marchTime(Uint t){
 		}
 
 	}
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 		// 	Unused code, formulation from Fatehi et al. Very sensitive with numerical precision.

@@ -52,15 +52,15 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 		tempGrad.push_back(zeroVector);
     	normalVec.push_back(zeroVector);
 
-    // temp.push_back(getT0());
-		// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
-	
-    // Quick Hack..
-		if (posToAdd[0] < EPSL_SMALL2){
-		temp.push_back(2000.0);
-		} else{
 		temp.push_back(getT0());
-		}
+		
+		// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );	
+
+		// if (posToAdd[0] < EPSL_SMALL2){
+		// temp.push_back(2000.0);
+		// } else{
+		// temp.push_back(getT0());
+		// }
 
 
     	isFS.push_back(0);
@@ -90,7 +90,6 @@ void ParticleAttributes::boundaryInit(){
 	numParticles = 0;
 	smoothingLength = simDataIn["smoothingLength"];
 	dx              = simDataIn["dx"];
-
 
 	for(auto boundaryEntry : parDataIn["objects"]){
 		int n = 0;
@@ -243,7 +242,7 @@ void ParticleAttributes::boundaryInit(){
 
       std::mt19937 rng;
       rng.seed(std::random_device()());
-      std::uniform_int_distribution<std::mt19937::result_type> dist6(0,1);
+      std::uniform_int_distribution<std::mt19937::result_type> dist6(0,100000);
 
 			if (simDataIn["dimensions"] == 3){
 				std::cout << "... Generating 3D Block Boundary" << std::endl;
@@ -252,9 +251,9 @@ void ParticleAttributes::boundaryInit(){
 				for (int k = offset; k <= (int)((z1 - z0)/dx) - offset; k ++ ){
 					Real3 posToAdd{x0 + dx * (Real)i, y0 + dx * (Real)j, z0 + dx * (Real)k};
 
-          Real3 _perturb{((Real)dist6(rng)-0.5) / 10.0 * dx,
-                        ((Real)dist6(rng)-0.5) / 10.0 * dx,
-                        ((Real)dist6(rng)-0.5) / 10.0 * dx};
+          Real3 _perturb{((Real)dist6(rng)/100000.0-0.5) / 10.0 * dx,
+                        ((Real)dist6(rng)/100000.0-0.5) / 10.0 * dx,
+                        ((Real)dist6(rng)/100000.0-0.5) / 10.0 * dx};
 
           posToAdd = add(posToAdd, _perturb);
 
@@ -307,10 +306,10 @@ void ParticleAttributes::boundaryInit(){
 					densdot.push_back(0);
 					densGrad.push_back(zeroVector);
 					tempGrad.push_back(zeroVector);
-          normalVec.push_back(zeroVector);
+			    	normalVec.push_back(zeroVector);
 
-          isFS.push_back(0);
-          curvature.push_back(0);
+			    	isFS.push_back(0);
+          			curvature.push_back(0);
 					L.push_back(zeromat);
 					L2.push_back(zeromat);
 					temp.push_back(T0);
@@ -429,13 +428,13 @@ void ParticleAttributes::fluidInit(){
 			L.push_back(zeromat);
 			L2.push_back(zeromat);
 
-			// if(posToAdd[1] < EPSL_SMALL){
-			//   temp.push_back(2000.0);
-			// } else{
-			//   temp.push_back(getT0());
-			// }
+			if(posToAdd[0] < EPSL_SMALL){
+			  temp.push_back(2000.0);
+			} else{
+			  temp.push_back(getT0());
+			}
 			// temp.push_back( posToAdd[0] *  posToAdd[0]);
-			temp.push_back( 2000.0 * posToAdd[0] * posToAdd[0] );
+			// temp.push_back( 2000.0 * posToAdd[0] * posToAdd[0] );
 			// temp.push_back( sin(posToAdd[0] * 3.141592) * sin(posToAdd[2] * 3.141592));
 			// temp.push_back( 2000.0 * posToAdd[0] / 50.0E-6 + 2000.0 * posToAdd[1] / 50.0E-6  );
 			// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
