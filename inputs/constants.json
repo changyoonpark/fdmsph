@@ -4,16 +4,16 @@
 
   "geometry" : {"type" : "sphere",
     "dropletRadius" : 1.65E-3,
-    "dropletCenter" : [0.0,0.0,1.66E-3],
+    "dropletCenter" : [0.0,0.0,1.75E-3],
     "geomOutputFile" : "../inputs/stow_droplet.h5part",
     "numParticles" : 200000
   },
 
   "outputFile" : "stow_droplet_test",
   "dimensions" : 3,
-  "dx" : 0.075E-3,
-  "smoothingLength" : 0.15E-3,
-  "IIFCoeff" : 50000.0,
+  "dx" : 0.25E-3,
+  "smoothingLength" : 0.5E-3,
+  "IIFCoeff" : 0.0,
   "EOS" : "Linear",
   "diffusionModel" : "DeltaSPH",
   "kernelType" : "Wendland_2h",
@@ -27,9 +27,9 @@
   "delta" : 0.1,
   "dt" : 1.0E-6,
   "outputStart" : 0,
-  "steps" : 221000,
-  "outper" : 1000,
-  "newfileper" : 100000000,
+  "steps" : 430,
+  "outper" : 1,
+  "newfileper" : 10000,
   "sensors" : [
     {"type" : "sensorZPlane",
      "coord" : 0.0}

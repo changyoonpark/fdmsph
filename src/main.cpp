@@ -52,7 +52,7 @@ int main ( void ){
 					// std::cout << "asdf : " << (t+1) % ((Uint)simDataInput["outper"]) << std::endl;
 				if ((t+1) % ((Uint)simDataInput["outper"]) == 0)
 					writer.write(pData,simDataInput["smoothingLength"]);
-				if (t % (Uint)simDataInput["newfileper"] == ((Uint)simDataInput["newfileper"]))
+				if ((t+1) % (Uint)simDataInput["newfileper"] == 0)
 					writer.openNextFile();
 				}
 

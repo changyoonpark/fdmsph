@@ -64,16 +64,16 @@ private:
 					   Real3 relpos, Real3 reldir,
 					   Real dist, Real3 gWij, Real vol_j)> heatTransfer;
 
-	std::function<Real(Real)>														TvsH;
-	std::function<Real(Real,Real,Real,Real,Real,Real)>                				EOS;
-	std::function<Real(Real,Real)>         							  				W_ij;
-	std::function<Real3(Real,Real3,Real)>  							 				gW_ij;
-	std::function<Real3(Real,Real3,Real)>  							 				gW_ij_nd;
-	std::function<Real(Real,Real,Real,Real,Real,Real,Real,Real3,Real3,Real3,Real3)> diffusiveTerm_ij;
-	std::function<Real(Real,Real)>									  				viscosityConstant;
-	std::function<Real3()>                 							 			    bodyForceAcc_i;
-	std::function<Real3(Real,Real3,Real3,Real,Real,Real,Real3,Real)>  				viscosityAcc_ij;
-	std::function<Real3(Real,Real3,Real,Real,Real,Real,Real)>  	  	  				pressureAcc_ij;
+	std::function<Real(Real)>															 TvsH;
+	std::function<Real(Real,Real,Real,Real,Real,Real)>                					 EOS;
+	std::function<Real(Real,Real)>         							  					 W_ij;
+	std::function<Real3(Real,Real3,Real)>  							 					 gW_ij;
+	std::function<Real3(Real,Real3,Real)>  							 			   	     gW_ij_nd;
+	std::function<Real(Real,Real,Real,Real,Real,Real,Real,Real,Real3,Real3,Real3,Real3)> diffusiveTerm_ij;
+	std::function<Real(Real,Real)>									  					 viscosityConstant;
+	std::function<Real3()>                 							 			    	 bodyForceAcc_i;
+	std::function<Real3(Real,Real3,Real3,Real,Real,Real,Real3,Real)>  					 viscosityAcc_ij;
+	std::function<Real3(Real,Real3,Real,Real,Real,Real,Real)>  	  	  					 pressureAcc_ij;
 
 	unsigned int totParticles;
 	std::map<std::string,int> ids;

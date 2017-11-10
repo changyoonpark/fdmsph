@@ -3,7 +3,7 @@
 	"rho0" : 1000.0,
 	"T0" : 0,
 	"mu" : 0.0003,
-	"soundSpeed" : 450.0,
+	"soundSpeed" : 30.0,
 	"specificHeat" : 1000.0,
 	"surfaceTensionCoeff" : 0.059,
 	"thermalConductivity" : 15.0,

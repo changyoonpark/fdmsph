@@ -450,14 +450,15 @@ namespace RealOps{
 
 
  	inline Real delta_SPH(Real  rho_i,      Real rho_j,
- 						  Real  vol_j,        Real delta,
+ 						  Real  vol_j,      Real delta,
  						  Real  soundSpeed, Real smoothingLength,
- 						  Real  dist,
+ 						  Real  mass_j,     Real  dist,
  						  Real3 relpos,    	Real3 gWij,
 						  Real3 densGrad_i, Real3 densGrad_j){
- 		const Real psi = 2.0 * ( - rho_j + rho_i) - dot(add(densGrad_j,densGrad_i),relpos);
- 		const Real qoo = dot(relpos, gWij) * vol_j * soundSpeed * smoothingLength * delta / (dist * dist);
- 		return psi * qoo;
+ 		// const Real psi = 2.0 * ( - rho_j + rho_i) - dot(add(densGrad_j,densGrad_i),relpos);
+ 		// const Real qoo = dot(relpos, gWij) * vol_j * soundSpeed * smoothingLength * delta / (dist * dist);
+		// return psi * qoo;
+		return 2.0 * delta * smoothingLength * soundSpeed * (rho_i - rho_j) * (dot(relpos, gWij) / (dist * dist)) * (mass_j / rho_j);
  	}
 
  	// inline Real temperatureDependentViscosity(Real mu, Real T){return 0;}

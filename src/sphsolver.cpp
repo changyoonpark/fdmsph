@@ -191,9 +191,9 @@ void SPHSolver::setDiffusiveTerm(){
 	} else if (simData["diffusionModel"] == "None"){
 		std::cout << "--- Diffusion Model : None" << std::endl;
 		diffusiveTerm_ij = [](Real  rho_i,      Real rho_j,
- 						  	  Real  vol_j,        Real delta,
+ 						  	  Real  vol_j,      Real delta,
  						  	  Real  soundSpeed, Real smoothingLength,
- 						  	  Real  dist,
+ 						  	  Real  mass_j,     Real  dist,
  						  	  Real3 relpos,    	Real3 gWij,
  						  	  Real3 densGrad_i, Real3 densGrad_j){return 0;};
 	} else{
@@ -422,6 +422,13 @@ void SPHSolver::computeInteractions(){
 			setDims(L_i,dims);
 
 			toMatrix3d(L_i,_L_i);
+
+			JacobiSVD<MatrixXd> svd_L_i(_L_i);
+			Real cond_L_i = svd_L_i.singularValues()(0) / svd_L_i.singularValues()(svd_L_i.singularValues().size()-1);		
+			
+			pData[setName_i]->normalVec[i][2] = cond_L_i;			
+
+
 			_L_i = _L_i.inverse();
 			toReal3x3(_L_i,L_i);
 			
@@ -606,12 +613,13 @@ void SPHSolver::computeInteractions(){
 
 					// Delta SPH Diffusion
 					pData[setName_i]->densdot[i] += dot(mult(rho_i, relvel), gWij) * vol_j;
+
 					pData[setName_i]->densdot[i] += diffusiveTerm_ij(rho_i,rho_j,
-																		 vol_j, (Real) simData["delta"],
-																		 pData[setName_j]->getSoundSpeed(), smoothingLength,
-																		 dist,
-																		 relpos,gWij,
-																		 densGrad_i,densGrad_j);
+																	 vol_j, (Real) simData["delta"],
+																	 pData[setName_j]->getSoundSpeed(), smoothingLength,
+																	 m_j,dist,
+																	 relpos,gWij,
+																	 densGrad_i,densGrad_j);
 
 					// Heat Transfer between particles. Note that the boundary densities must be set to the
 					// Actual density of the boundary material, to account for the correct thermal diffusivity.
