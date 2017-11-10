@@ -1,5 +1,5 @@
 #include "sphsolver.hpp"
-
+#define CALC_HEAT 0
 
 SPHSolver::SPHSolver(json& _simData, std::map<std::string,ParticleAttributes*>& _pData)
 // SPHSolver::SPHSolver(const json& _simData, std::map<std::string,ParticleAttributes*>& _pData)
@@ -346,6 +346,8 @@ void SPHSolver::computeInteractions(){
 	const Real3x3 zeromat{zerovec,zerovec,zerovec};
 
 	std::cout << "		|------ ... Performing Fluid - (Fluid / Boundary) Interactions"<< std::endl;
+
+	#if CALC_HEAT
 	for (const auto& setName_i : setNames){
 
 		const int setID_i = ids[setName_i];
@@ -361,7 +363,6 @@ void SPHSolver::computeInteractions(){
 			MatrixXd _L_i(3,3); _L_i = MatrixXd::Zero(3,3);
 			Real3x3& L_i = pData[setName_i]->L[i];
 			L_i = zeromat;
-			
 			// Renormalization Tensor (Second Derivative)
 			MatrixXd _Q_i(6,6); _Q_i = MatrixXd::Zero(6,6);
 			Real3x3& L2_i = pData[setName_i]->L2[i];
@@ -539,6 +540,11 @@ void SPHSolver::computeInteractions(){
 		}
 
 	} 
+	#endif
+
+
+
+
 
 	for (const auto& setName_i : setNames){
 
@@ -612,37 +618,38 @@ void SPHSolver::computeInteractions(){
 														T_j);
 
 					// Delta SPH Diffusion
-					pData[setName_i]->densdot[i] += dot(mult(rho_i, relvel), gWij) * vol_j;
+					#if CALC_HEAT
+						pData[setName_i]->densdot[i] += dot(mult(rho_i, relvel), gWij) * vol_j;
 
-					pData[setName_i]->densdot[i] += diffusiveTerm_ij(rho_i,rho_j,
-																	 vol_j, (Real) simData["delta"],
-																	 pData[setName_j]->getSoundSpeed(), smoothingLength,
-																	 m_j,dist,
-																	 relpos,gWij,
-																	 densGrad_i,densGrad_j);
+						pData[setName_i]->densdot[i] += diffusiveTerm_ij(rho_i,rho_j,
+																		vol_j, (Real) simData["delta"],
+																		pData[setName_j]->getSoundSpeed(), smoothingLength,
+																		m_j,dist,
+																		relpos,gWij,
+																		densGrad_i,densGrad_j);
+						// Heat Transfer between particles. Note that the boundary densities must be set to the
+						// Actual density of the boundary material, to account for the correct thermal diffusivity.
+						rho_i_temp = isBoundary_i ? pData[setName_i]->getMaterialDensity() : rho_i ;
+						rho_j_temp = isBoundary_j ? pData[setName_j]->getMaterialDensity() : rho_j ;
+						
 
-					// Heat Transfer between particles. Note that the boundary densities must be set to the
-					// Actual density of the boundary material, to account for the correct thermal diffusivity.
-					rho_i_temp = isBoundary_i ? pData[setName_i]->getMaterialDensity() : rho_i ;
-					rho_j_temp = isBoundary_j ? pData[setName_j]->getMaterialDensity() : rho_j ;
-					
+						// If the laplacian corrector cannot be defined, use the conventional operator.
+						Real heat;
+						if (cond_i < 10.0){
+							heat = consistentHeatTransfer(L2_i,tempGrad_i,
+														T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
+														relpos, reldir,
+														dist, gWij, vol_j);
+						} else{
+							heat = inconsistentHeatTransfer(tempGrad_i, tempGrad_j,
+															T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
+															relpos, reldir,
+															dist, gWij, vol_j);		
+						}
 
-					// If the laplacian corrector cannot be defined, use the conventional operator.
-					Real heat;
-					if (cond_i < 10.0){
-						heat = consistentHeatTransfer(L2_i,tempGrad_i,
-													  T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
-													  relpos, reldir,
-													  dist, gWij, vol_j);
-					} else{
-						heat = inconsistentHeatTransfer(tempGrad_i, tempGrad_j,
-										    			T_i, T_j, m_j, rho_i_temp, rho_j_temp, k_i, k_j,
-										    			relpos, reldir,
-										 				dist, gWij, vol_j);		
-					}
-
-					// pData[setName_i]->enthalpydot[i] += heat * 15.0 / (7900.0 * 450.0);
-					pData[setName_i]->enthalpydot[i] += heat;
+						// pData[setName_i]->enthalpydot[i] += heat * 15.0 / (7900.0 * 450.0);
+						pData[setName_i]->enthalpydot[i] += heat;
+					#endif
 					
 					// If the particle is not a boundary particle, accumulate the momentum contribution.
 					if (!isBoundary_i){
@@ -659,8 +666,12 @@ void SPHSolver::computeInteractions(){
 					if(isSensor_i && !isBoundary_j){
 						Real3 f = add(pressureAcc_ij(m_j,gWij,P_i,P_j,rho_i,rho_j,vol_j), viscosityAcc_ij(m_j, relpos, gWij, rho_i, rho_j,dist, relvel, mu_j));
 						f = mult(m_i,f);
-						pData[setName_i]->heatSensed[i] += heat;
 						pData[setName_i]->forceSensed[i] = add(pData[setName_i]->forceSensed[i], f);
+
+						#if CALC_HEAT
+							pData[setName_i]->heatSensed[i] += heat;
+						#endif
+
 					}
 
 
