@@ -618,15 +618,15 @@ void SPHSolver::computeInteractions(){
 														T_j);
 
 					// Delta SPH Diffusion
-					#if CALC_HEAT
-						pData[setName_i]->densdot[i] += dot(mult(rho_i, relvel), gWij) * vol_j;
+					pData[setName_i]->densdot[i] += dot(mult(rho_i, relvel), gWij) * vol_j;
 
-						pData[setName_i]->densdot[i] += diffusiveTerm_ij(rho_i,rho_j,
-																		vol_j, (Real) simData["delta"],
-																		pData[setName_j]->getSoundSpeed(), smoothingLength,
-																		m_j,dist,
-																		relpos,gWij,
-																		densGrad_i,densGrad_j);
+					pData[setName_i]->densdot[i] += diffusiveTerm_ij(rho_i,rho_j,
+																	vol_j, (Real) simData["delta"],
+																	pData[setName_j]->getSoundSpeed(), smoothingLength,
+																	m_j,dist,
+																	relpos,gWij,
+																	densGrad_i,densGrad_j);
+					#if CALC_HEAT
 						// Heat Transfer between particles. Note that the boundary densities must be set to the
 						// Actual density of the boundary material, to account for the correct thermal diffusivity.
 						rho_i_temp = isBoundary_i ? pData[setName_i]->getMaterialDensity() : rho_i ;
