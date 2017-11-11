@@ -540,6 +540,21 @@ void SPHSolver::computeInteractions(){
 		}
 
 	} 
+	#else
+		for (const auto& setName_i : setNames){
+
+		const int setID_i = ids[setName_i];
+		const auto& ps_i = nsearch->point_set(setID_i);
+
+		#pragma omp parallel for num_threads(NUMTHREADS)
+		for (int i = 0; i < ps_i.n_points(); ++i){
+			// Clear the time derivatives.
+			pData[setName_i]->acc[i] = Real3{0.0,0.0,0.0};
+			pData[setName_i]->densdot[i] = 0.0;
+			pData[setName_i]->enthalpydot[i] = 0.0;			
+		}
+
+	} 
 	#endif
 
 
@@ -626,6 +641,7 @@ void SPHSolver::computeInteractions(){
 																	m_j,dist,
 																	relpos,gWij,
 																	densGrad_i,densGrad_j);
+
 					#if CALC_HEAT
 						// Heat Transfer between particles. Note that the boundary densities must be set to the
 						// Actual density of the boundary material, to account for the correct thermal diffusivity.
