@@ -9,19 +9,18 @@
 	"thermalConductivity" : 15.0,
 	"thermalExpansion" : 0,
 	"v0"   : [0,0,-3.62],
-	"#geometry" : {"type" : "block",
+	"geometry1" : {"type" : "block",
 					"begin" : [0.0,0.0,0.0],
 					"end" : [50.0E-6,0.0,0.0],
 					"includeBoundary" : "True"},					
 	"geometry" : {
 		"type" : "pointCloud",
 		"file1" : "../inputs/droplet_dx_0.00005.h5part",
-		"file" : "../inputs/stow_droplet.h5part" 
+		"file" : "../inputs/nassiri_droplet.h5part" 
 	},
-    "1geometry" : {
-		"type" : "block",
-		"begin" : [0.0,0.0,0.0],
-		"end" : [50.0E-6,0.0,0.0],
-		"includeBoundary" : "True"
-	}	
+	"geometry1" : {"type" : "sphere",
+		"dropletRadius" : 0.00005,
+		"dropletCenter" : [0.0,0.0,0.000055],
+		"geomOutputFile" : "../inputs/henning_3d_transient_103.h5part"
+	}
 }
