@@ -47,7 +47,7 @@ public:
 	void setBodyForce();
 	void setPressureGradientFormulation();
 	void setSensorParticles();
-	// void addParticles();
+	void addFluidInletParticles(int t);
 
 
 	// void calculateDensity();

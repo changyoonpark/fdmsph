@@ -14,6 +14,7 @@ ParticleAttributes::ParticleAttributes(const json& _simDataIn, const json& _parD
 }
 
 
+
 void ParticleAttributes::readInitialPlacement(std::string fileName){
 
 	std::cout << "... Reading Particle Placements From " << fileName << std::endl;
@@ -40,44 +41,7 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 	for(int i=0;i<x.size();i++){
 
 		Real3 posToAdd{x[i],y[i],z[i]};
-		mass.push_back(0);
-		vol.push_back(0);
-    	perturb.push_back(zeroVector);
-		pos.push_back(posToAdd);
-		vel.push_back(getv0());
-		acc.push_back(zeroVector);
-		dens.push_back(getRho0());
-		densdot.push_back(0);
-		densGrad.push_back(zeroVector);
-		tempGrad.push_back(zeroVector);
-    	normalVec.push_back(zeroVector);
-
-		temp.push_back(getT0());
-		
-		// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );	
-
-		// if (posToAdd[0] < EPSL_SMALL2){
-		// temp.push_back(2000.0);
-		// } else{
-		// temp.push_back(getT0());
-		// }
-
-
-    	isFS.push_back(0);
-	    curvature.push_back(0);
-		// temp.push_back(posToAdd[0]*posToAdd[0] + posToAdd[2]*posToAdd[2]);
-
-		L.push_back(zeromat);
-		L2.push_back(zeromat);
-
-		enthalpy.push_back(0);
-		enthalpydot.push_back(0);
-		type.push_back("Fluid");
-		force.push_back(zeroVector);
-		isSensor.push_back(false);
-		heatSensed.push_back(0);
-		forceSensed.push_back(zeroVector);
-		numParticles+=1;
+		addDefaultFluidParticleAtPosition(posToAdd,getT0());
 		n+=1;
 	}
 
@@ -90,6 +54,31 @@ void ParticleAttributes::boundaryInit(){
 	numParticles = 0;
 	smoothingLength = simDataIn["smoothingLength"];
 	dx              = simDataIn["dx"];
+
+
+std::cout << "... Computing Volume that should be used (2D) " << std::endl;
+
+	Real kernelSum = 0.0, dx = (Real)simDataIn["dx"];		
+	int neighs = 0;
+	for(int i = -20; i <= 20; i++){
+		for(int j = -20; j <= 20; j++){
+			Real xTemp = ((Real) i) * dx;
+			Real yTemp = ((Real) j) * dx;
+			Real3 relPos{xTemp, yTemp, 0};
+			Real dist = length(relPos);
+			// std::cout << dist << std::endl;
+			if ( dist < ((Real) simDataIn["smoothingLength"]) ){
+				kernelSum += W_Wendland_2D_2h(dist, (Real) simDataIn["smoothingLength"]);
+				neighs ++;
+			}
+		}
+	}	
+
+	std::cout << "... Number of neighbors for the center particle : " << neighs << std::endl;
+	defaultVolume = 1.0 / kernelSum;	
+	defaultMass = defaultVolume * (Real) parDataIn["rho0"];
+
+	std::cout << "... The default volume & mass used for the boundary is v_o = " << defaultVolume << ", m_o = " << defaultMass << std::endl;
 
 	for(auto boundaryEntry : parDataIn["objects"]){
 		int n = 0;
@@ -137,31 +126,7 @@ void ParticleAttributes::boundaryInit(){
 					    (posToAdd[1] > y0 + wallt + offset * dx || posToAdd[1] < y1 - wallt - offset * dx) &&
 					    (posToAdd[2] > z0 + wallt + offset * dx || posToAdd[2] < z1 - wallt - offset * dx) ) continue;
 
-					mass.push_back(0);
-					vol.push_back(0);
-					pos.push_back(posToAdd);
-          			perturb.push_back(zeroVector);
-					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);
-					dens.push_back(getRho0());
-					densdot.push_back(0);
-					densGrad.push_back(zeroVector);
-					tempGrad.push_back(zeroVector);
-          			normalVec.push_back(zeroVector);
-
-          			isFS.push_back(0);
-          			curvature.push_back(0);
-					L.push_back(zeromat);
-					L2.push_back(zeromat);
-					temp.push_back(T0);
-					enthalpy.push_back(0);
-					enthalpydot.push_back(0);
-					type.push_back("Boundary");
-					force.push_back(zeroVector);
-					isSensor.push_back(false);
-					heatSensed.push_back(0);
-					forceSensed.push_back(zeroVector);
-					numParticles+=1;
+					addDefaultFluidParticleAtPosition(posToAdd,getT0());
 					n+=1;
 
 				}}}
@@ -179,31 +144,7 @@ void ParticleAttributes::boundaryInit(){
 					if ( (posToAdd[0] >= x0 + wallt - 0.99 * offset * dx && posToAdd[0] <= x1 - wallt + 0.99 * offset *  dx ) &&
 					     (posToAdd[2] >= z0 + wallt - 0.99 * offset * dx && posToAdd[2] <= z1 - wallt + 0.99 * offset *  dx ) ) continue;
 
-					mass.push_back(0);
-					vol.push_back(0);
-					pos.push_back(posToAdd);
-          			perturb.push_back(zeroVector);
-					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);
-					dens.push_back(getRho0());
-					densdot.push_back(0);
-					densGrad.push_back(zeroVector);
-					tempGrad.push_back(zeroVector);
-          normalVec.push_back(zeroVector);
-
-          isFS.push_back(0);
-          curvature.push_back(0);
-					L.push_back(zeromat);
-					L2.push_back(zeromat);
-					temp.push_back(T0);
-					enthalpy.push_back(0);
-					enthalpydot.push_back(0);
-					type.push_back("Boundary");
-					force.push_back(zeroVector);
-					isSensor.push_back(false);
-					heatSensed.push_back(0);
-					forceSensed.push_back(zeroVector);
- 					numParticles+=1;
+					addDefaultFluidParticleAtPosition(posToAdd,getT0());
 					n+=1;
 
 				}}
@@ -255,72 +196,21 @@ void ParticleAttributes::boundaryInit(){
                         ((Real)dist6(rng)/100000.0-0.5) / 10.0 * dx,
                         ((Real)dist6(rng)/100000.0-0.5) / 10.0 * dx};
 
-          posToAdd = add(posToAdd, _perturb);
+          			posToAdd = add(posToAdd, _perturb);
 
-					Real3 zeroVector{0,0,0};
-					Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
-					mass.push_back(0);
-					vol.push_back(0);
-					pos.push_back(posToAdd);
-          perturb.push_back(_perturb);
-					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);
-					dens.push_back(getRho0());
-					densdot.push_back(0);
-					densGrad.push_back(zeroVector);
-					tempGrad.push_back(zeroVector);
-          normalVec.push_back(zeroVector);
-
-          isFS.push_back(0);
-          curvature.push_back(0);
-					L.push_back(zeromat);
-					L2.push_back(zeromat);
-					// temp.push_back(0.5 * posToAdd[0] * posToAdd[0]);
-					temp.push_back(T0);
-					enthalpy.push_back(0);
-					enthalpydot.push_back(0);
-					type.push_back("Boundary");
-					force.push_back(zeroVector);
-					isSensor.push_back(false);
-					heatSensed.push_back(0);
-					forceSensed.push_back(zeroVector);
-					numParticles+=1;
+					addDefaultFluidParticleAtPosition(posToAdd,getT0());
 					n+=1;
 				}}}
 
 			} else if (simDataIn["dimensions"] == 2){
 				std::cout << "... Generating 2D Block Boundary" << std::endl;
 				for (int i = offset; i <= (int)((x1 - x0)/dx) - offset; i ++ ){
-				for (int k = offset; k <= (int)((z1 - z0)/dx) - offset; k ++ ){
+				for (int k = offset; k <= (int)((y1 - y0)/dx) - offset; k ++ ){
 
-					Real3 posToAdd{x0 + dx * i, 0, z0 + dx * k};
+					Real3 posToAdd{x0 + dx * i, y0 + dx * k, 0};
 					const Real3 zeroVector{0,0,0};
-					const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
-					mass.push_back(0);
-					vol.push_back(0);
-					pos.push_back(posToAdd);
-          			perturb.push_back(zeroVector);
-					vel.push_back(zeroVector);
-					acc.push_back(zeroVector);
-					dens.push_back(getRho0());
-					densdot.push_back(0);
-					densGrad.push_back(zeroVector);
-					tempGrad.push_back(zeroVector);
-			    	normalVec.push_back(zeroVector);
-
-			    	isFS.push_back(0);
-          			curvature.push_back(0);
-					L.push_back(zeromat);
-					L2.push_back(zeromat);
-					temp.push_back(T0);
-					enthalpy.push_back(0);
-					enthalpydot.push_back(0);
-					type.push_back("Boundary");
-					force.push_back(zeroVector);
-					isSensor.push_back(false);
-					heatSensed.push_back(0);
-					forceSensed.push_back(zeroVector);
- 					numParticles+=1;
+					const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};					
+					addDefaultFluidParticleAtPosition(posToAdd,getT0());
 					n+=1;
 
 				}}
@@ -340,6 +230,52 @@ void ParticleAttributes::boundaryInit(){
 
 void ParticleAttributes::fluidInit(){
 
+	std::cout << "--- Initializing Fluid Inlet " << std::endl;
+
+	inletWidth    = (Real)parDataIn["inlet"]["width"];
+
+
+	if (simDataIn["dimensions"] == 2){
+
+		std::cout << "... Assigning the inlet properties " << std::endl;
+
+		inletCenter   = Real3 { (Real) parDataIn["inlet"]["center"][0],
+							    (Real) parDataIn["inlet"]["center"][1], 0 };
+
+		inletTangent  = Real3 {((Real) parDataIn["inlet"]["tangent"][0]),
+							    (Real) parDataIn["inlet"]["tangent"][1], 0 };				
+
+		inletVelocity = Real3 { (Real) parDataIn["inlet"]["vel"] * (Real) parDataIn["inlet"]["normal"][0],
+		 						(Real) parDataIn["inlet"]["vel"] * (Real) parDataIn["inlet"]["normal"][1], 0};
+
+		inletSpeed = length(inletVelocity);
+
+		std::cout << "... inlet speed is " << inletSpeed << " [m/s]" << std::endl; 
+
+		std::cout << "... Computing Volume that should be used (2D) " << std::endl;
+
+		Real kernelSum = 0.0, dx = (Real)simDataIn["dx"];		
+		int neighs = 0;
+		for(int i = -20; i <= 20; i++){
+			for(int j = -20; j <= 20; j++){
+				Real xTemp = ((Real) i) * dx;
+				Real yTemp = ((Real) j) * dx;
+				Real3 relPos{xTemp, yTemp, 0};
+				Real dist = length(relPos);
+				// std::cout << dist << std::endl;
+				if ( dist < ((Real) simDataIn["smoothingLength"]) ){
+					kernelSum += W_Wendland_2D_2h(dist, (Real) simDataIn["smoothingLength"]);
+					neighs ++;
+				}
+			}
+		}	
+
+		std::cout << "... Number of neighbors for the center particle : " << neighs << std::endl;
+		defaultVolume = 1.0 / kernelSum;	
+		defaultMass = defaultVolume * (Real) parDataIn["rho0"];
+
+		std::cout << "... The default volume & mass is v_o = " << defaultVolume << ", m_o = " << defaultMass << std::endl;
+	} 
 
 	std::cout << "--- Initializing Fluid Particles" << std::endl;
 
@@ -392,61 +328,14 @@ void ParticleAttributes::fluidInit(){
 
 			Real3 zeroVector{0,0,0};
 			Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
-
-    //   Real3 _perturb{((Real)dist6(rng)/1000.0-0.5) / 2.0 * 0.5 *  dx,
-    //                  ((Real)dist6(rng)/1000.0-0.5) / 2.0 *  0.5 * dx,
-    //                  ((Real)dist6(rng)/1000.0-0.5) / 2.0 *  0.5 * dx};
-			
-    //   Real3 _perturb{((Real)dist6(rng)/1000.0-0.5) / 2.0 * 0.5 *  dx,
-    //                   (Real)0.0,
-    //                  ((Real)dist6(rng)/1000.0-0.5) / 2.0 *  0.5 * dx};
-
 			Real3 _perturb{0,0,0};
 
 			Real3 posToAdd{x0 + dx * (Real)i,
                  	       y0 + dx * (Real)j,
                      	   z0 + dx * (Real)k};
 
-
-		    // posToAdd = add(posToAdd,_perturb);
-
-			// Real3 posToAdd{x0 + dx * (Real)i, y0 + dx * (Real)j, z0 + dx * (Real)k};
-			mass.push_back(0);
-			vol.push_back(0);
-			pos.push_back(posToAdd);
-      		perturb.push_back(_perturb);
-			vel.push_back(getv0());
-			acc.push_back(zeroVector);
-			dens.push_back(getRho0());
-			densdot.push_back(0);
-			densGrad.push_back(zeroVector);
-			tempGrad.push_back(zeroVector);
-      		normalVec.push_back(zeroVector);
-
-      		isFS.push_back(0);
-      		curvature.push_back(0);
-			L.push_back(zeromat);
-			L2.push_back(zeromat);
-
-			if(posToAdd[0] < EPSL_SMALL){
-			  temp.push_back(2000.0);
-			} else{
-			  temp.push_back(getT0());
-			}
-			// temp.push_back( posToAdd[0] *  posToAdd[0]);
-			// temp.push_back( 2000.0 * posToAdd[0] * posToAdd[0] );
-			// temp.push_back( sin(posToAdd[0] * 3.141592) * sin(posToAdd[2] * 3.141592));
-			// temp.push_back( 2000.0 * posToAdd[0] / 50.0E-6 + 2000.0 * posToAdd[1] / 50.0E-6  );
-			// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
-
-			enthalpy.push_back(0);
-			enthalpydot.push_back(0);
-			type.push_back("Fluid");
-			force.push_back(zeroVector);
-			isSensor.push_back(false);
-			heatSensed.push_back(0);
-			forceSensed.push_back(zeroVector);
-			numParticles += 1;
+		    posToAdd = add(posToAdd,_perturb);
+			addDefaultFluidParticleAtPosition(posToAdd,getT0());
 			n += 1;
 
 		}}}
@@ -469,43 +358,7 @@ void ParticleAttributes::fluidInit(){
 		for(int i = 0; i < pointCloud.size(); i++){
 			std::cout << pointCloud[i] << std::endl;
 			Real3 posToAdd{pointCloud[i]["x"],pointCloud[i]["y"],pointCloud[i]["z"]};
-			mass.push_back(0);
-			vol.push_back(0);
-			perturb.push_back(zeroVector);
-			pos.push_back(posToAdd);
-			vel.push_back(getv0());
-			acc.push_back(zeroVector);
-			dens.push_back(getRho0());
-			densdot.push_back(0);
-			densGrad.push_back(zeroVector);
-			tempGrad.push_back(zeroVector);
-			normalVec.push_back(zeroVector);
-	
-			temp.push_back(getT0());
-			// temp.push_back( - posToAdd[0] * (2000.0 / (50.0E-6)) + 2000.0 );
-		
-		// Quick Hack..
-			// if (posToAdd[0] < EPSL_SMALL2){
-			// temp.push_back(2000.0);
-			// } else{
-			// temp.push_back(getT0());
-			// }
-	
-	
-			isFS.push_back(0);
-			curvature.push_back(0);
-
-			L.push_back(zeromat);
-			L2.push_back(zeromat);
-	
-			enthalpy.push_back(0);
-			enthalpydot.push_back(0);
-			type.push_back("Fluid");
-			force.push_back(zeroVector);
-			isSensor.push_back(false);
-			heatSensed.push_back(0);
-			forceSensed.push_back(zeroVector);
-			
+			addDefaultFluidParticleAtPosition(posToAdd,getT0());			
 			numParticles+=1;
 			n+=1;			
 		}
@@ -514,7 +367,98 @@ void ParticleAttributes::fluidInit(){
 
 }
 
+void ParticleAttributes::addParticlesToFluid(){	
+
+	if ( simDataIn["dimensions"] == 2 ){		
+
+		addDefaultFluidParticleAtPosition(inletCenter);
+
+		for ( int i = 1; i <= (int)( inletWidth / (2.0 * dx) ) + 1; i++ ){
+
+			Real3 posToAdd = add( inletCenter, mult(  ((Real) i) * dx, inletTangent ));
+
+			addDefaultFluidParticleAtPosition( posToAdd );
+
+			posToAdd = sub( inletCenter, mult(  ((Real) i) * dx, inletTangent ));
+			addDefaultFluidParticleAtPosition( posToAdd );
+
+		}
+		
+	}
+}
+
+void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd){
+
+	mass.push_back(defaultMass);
+	vol.push_back(defaultVolume);
+	perturb.push_back(zeroVector);
+
+	pos.push_back(posToAdd);
+	vel.push_back(inletVelocity);
+	acc.push_back(zeroVector);
+	dens.push_back(getRho0());
+	densdot.push_back(0);
+	densGrad.push_back(zeroVector);
+	tempGrad.push_back(zeroVector);
+	normalVec.push_back(zeroVector);
+	temp.push_back(getT0());
+	isFS.push_back(0);
+	curvature.push_back(0);
+	L.push_back(zeromat);
+	L2.push_back(zeromat);	
+	velGrad.push_back(zeromat);
+	tau.push_back(zeromat);
+	tauDot.push_back(zeromat);
+
+	enthalpy.push_back(0);
+	enthalpydot.push_back(0);
+	type.push_back("Fluid");
+	force.push_back(zeroVector);
+	isSensor.push_back(false);
+	heatSensed.push_back(0);
+	forceSensed.push_back(zeroVector);		
+	
+	numParticles += 1;
+
+}
+
+void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd, Real temperature){
+
+	mass.push_back(defaultMass);
+	vol.push_back(defaultVolume);
+	perturb.push_back(zeroVector);
+
+	pos.push_back(posToAdd);
+	vel.push_back(inletVelocity);
+	acc.push_back(zeroVector);
+	dens.push_back(getRho0());
+	densdot.push_back(0);
+	densGrad.push_back(zeroVector);
+	tempGrad.push_back(zeroVector);
+	normalVec.push_back(zeroVector);
+	temp.push_back(temperature);
+	isFS.push_back(0);
+	curvature.push_back(0);
+	L.push_back(zeromat);
+	L2.push_back(zeromat);	
+	velGrad.push_back(zeromat);
+	tau.push_back(zeromat);
+	tauDot.push_back(zeromat);
+
+	enthalpy.push_back(0);
+	enthalpydot.push_back(0);
+	type.push_back("Fluid");
+	force.push_back(zeroVector);
+	isSensor.push_back(false);
+	heatSensed.push_back(0);
+	forceSensed.push_back(zeroVector);		
+	
+	numParticles += 1;
+
+}
+
 void ParticleAttributes::initParticles(){
+
 	if      ( parDataIn["type"] == "Fluid"    ) fluidInit();
 	else if ( parDataIn["type"] == "Boundary" ) boundaryInit();
 	else{

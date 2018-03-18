@@ -119,13 +119,41 @@ namespace RealOps{
 	    return std::array<Real,3>{a[0]+b[0],a[1]+b[1],a[2]+b[2]};
 	}
 
-	inline std::array<Real,3> sub( const std::array<Real,3>& a,  const std::array<Real,3>& b) {
-	    return std::array<Real,3>{a[0]-b[0],a[1]-b[1],a[2]-b[2]};
+
+	inline Real3 sub( Real3 a,  Real3 b) {
+		return Real3{a[0]-b[0],a[1]-b[1],a[2]-b[2]};
 	}
 
-	inline Real3 mult( Real c, const Real3& a) {
+	inline Real3x3 sub( Real3x3 a,  Real3x3 b) {
+		return Real3x3{Real3{a[0][0] - b[0][0],a[0][1] - b[0][1],a[0][2] - b[0][2]},
+					   Real3{a[1][0] - b[1][0],a[1][1] - b[1][1],a[1][2] - b[1][2]},
+					   Real3{a[2][0] - b[2][0],a[2][1] - b[2][1],a[2][2] - b[2][2]}};
+	}
+
+	inline Real3 mult( Real c, Real3 a) {
 	    return Real3{c * a[0], c * a[1], c * a[2]};
 	}
+
+	// cij = aik*bkj
+	inline Real3x3 mult( const Real3x3& a, const Real3x3& b) {
+	    return Real3x3{Real3{a[0][0]*b[0][0]+a[0][1]*b[1][0]+a[0][2]*b[2][0], 
+							 a[0][0]*b[0][1]+a[0][1]*b[1][1]+a[0][2]*b[2][1], 
+							 a[0][0]*b[0][2]+a[0][1]*b[1][2]+a[0][2]*b[2][2]},
+
+					   Real3{a[1][0]*b[0][0]+a[1][1]*b[1][0]+a[1][2]*b[2][0], 
+					         a[1][0]*b[0][1]+a[1][1]*b[1][1]+a[1][2]*b[2][1], 
+							 a[1][0]*b[0][2]+a[1][1]*b[1][2]+a[1][2]*b[2][2]},
+
+					   Real3{a[2][0]*b[0][0]+a[2][1]*b[1][0]+a[2][2]*b[2][0], 
+					   		 a[2][0]*b[0][1]+a[2][1]*b[1][1]+a[2][2]*b[2][1], 
+							 a[2][0]*b[0][2]+a[2][1]*b[1][2]+a[2][2]*b[2][2]}};
+	}
+
+	// inline Real3x3 mult( Real c, const Real3x3& a) {
+	//     return Real3x3{mult(c,a[0]),
+	// 				   mult(c,a[1]),
+	// 				   mult(c,a[2])};
+	// }
 
 	inline std::array<Real,3> divide(const std::array<Real,3>& a, Real c) {
 	    return std::array<Real,3>{a[0] / c, a[1] / c, a[2] / c};
@@ -179,8 +207,26 @@ namespace RealOps{
  		return Real3x3{mult(a,b[0]),mult(a,b[1]),mult(a,b[2])};
  	}
 
-	inline Real3x3 add( const Real3x3& a,  const Real3x3& b) {
+ 	inline Real3 mult(Real3x3 a, Real3 b){
+ 		return Real3{ a[0][0] * b[0] + a[0][1] * b[1] + a[0][2] * b[2],
+		 			  a[1][0] * b[0] + a[1][1] * b[1] + a[1][2] * b[2],
+					  a[2][0] * b[0] + a[2][1] * b[1] + a[2][2] * b[2]};
+ 	}
+
+
+
+	inline Real3x3 add( Real3x3 a,  Real3x3 b) {
 	    return Real3x3 { add(a[0],b[0]), add(a[1],b[1]), add(a[2],b[2])};
+	}
+
+	inline Real3x3 transpose( const Real3x3 a){
+		// return Real3x3{ Real3{a[0][0],a[0][1],a[0][2]},
+		// 				   Real3{a[1][0],a[1][1],a[1][2]},
+		// 				   Real3{a[2][0],a[2][1],a[2][2]}};
+
+		return Real3x3{ Real3{a[0][0],a[1][0],a[2][0]},
+						Real3{a[0][1],a[1][1],a[2][1]},
+						Real3{a[0][2],a[1][2],a[2][2]}};
 	}
 
 	inline Real doubleDot(const Real3x3& a, const Real3x3& b){
@@ -271,11 +317,6 @@ namespace RealOps{
 
 	}
 
- 	inline Real3 mult(Real3x3& a, Real3& b){
- 		return Real3{a[0][0] * b[0] + a[0][1] * b[1] + a[0][2] * b[2],
- 					 a[1][0] * b[0] + a[1][1] * b[1] + a[1][2] * b[2],
- 					 a[2][0] * b[0] + a[2][1] * b[1] + a[2][2] * b[2]};
- 	}
 
 	inline Real W_Wendland_1D_2h(Real dist, Real smoothingLength){
 		Real h = smoothingLength * 0.5;
@@ -484,6 +525,15 @@ namespace RealOps{
 
  		return mult(( 4.0 * mj * mu * dot(relpos, gWij) / ((rho_i + rho_j) * (dist * dist + EPSL_SMALL )) ), relvel );
  	}
+
+
+	inline Real3 extraStress_acc_ij(Real mj, Real3 gWij, Real rho_i, Real rho_j, Real3x3 tau_i, Real3x3 tau_j){
+		return 
+		mult(
+			add(mult(1./(rho_i*rho_i),tau_i),mult(1./(rho_j*rho_j),tau_j)),
+			mult(mj, gWij)
+		);
+	}
 
  	inline Real3 pressure_acc_ij_1(Real mj, Real3 gWij, Real P_i, Real P_j, Real rho_i, Real rho_j, Real vol_j){
  		return mult( - mj * (P_i + P_j) / (rho_i * rho_j), gWij);

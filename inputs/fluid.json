@@ -1,19 +1,24 @@
 {
 	"type" : "Fluid",
+	"rho0_" : 1000.0,
 	"rho0" : 1000.0,
 	"T0" : 0,
-	"mu" : 0.0003,
-	"soundSpeed" : 30.0,
-	"specificHeat" : 1000.0,
+	"mu" : 0.2,
+	"lambda" : 0.1,
+	"eta": 0.2, 
+	"soundSpeed" : 10.0,
+	"specificHeat_" : 1000.0,
+	"specificHeat" : 1.0,
 	"surfaceTensionCoeff" : 0.059,
-	"thermalConductivity" : 15.0,
+	"thermalConductivity_" : 15.0,
+	"thermalConductivity" : 1.0,
 	"thermalExpansion" : 0,
 	"v0"   : [0,0,-3.62],
-	"geometry1" : {"type" : "block",
+	"geometry" : {"type" : "block",
 					"begin" : [0.0,0.0,0.0],
-					"end" : [50.0E-6,0.0,0.0],
+					"end" : [-1.0,0.0,0.0],
 					"includeBoundary" : "True"},					
-	"geometry" : {
+	"geometry_" : {
 		"type" : "pointCloud",
 		"file1" : "../inputs/droplet_dx_0.00005.h5part",
 		"file" : "../inputs/nassiri_droplet.h5part" 
@@ -22,5 +27,13 @@
 		"dropletRadius" : 0.00005,
 		"dropletCenter" : [0.0,0.0,0.000055],
 		"geomOutputFile" : "../inputs/henning_3d_transient_103.h5part"
+	},
+	"inlet" : {
+		"dimensions" : 2,
+		"center" : [0,1.0],
+		"width" : 1.0,
+		"normal" : [0,-1.0],
+		"tangent" : [1.0,0],
+		"vel" : 1.0
 	}
 }

@@ -19,8 +19,17 @@ public:
 	unsigned int numParticles;
 	unsigned int setID;
 	Real dx, smoothingLength;
+	Real oneOverLambda, eta;
+
+	Real defaultVolume, defaultMass;
+	Real inletWidth;
+	Real inletSpeed;
+	Real3 inletVelocity;
+	Real3 inletTangent;
+	Real3 inletCenter;
 
 	std::vector<Real>  vol;
+	std::vector<Real>  particleDensity;
 	std::vector<Real> mass;
 	std::vector<Real3> pos;
 	std::vector<Real3> perturb;
@@ -35,6 +44,12 @@ public:
 	std::vector<Real3x3> L;
 	std::vector<Real> isFS;
 	std::vector<Real3x3> L2;
+
+	std::vector<Real3x3> tau;
+	std::vector<Real3x3> tauDot;
+	std::vector<Real3x3> velGrad;
+
+
 	std::vector<Real>  temp;
 	std::vector<Real>  enthalpy;
 	std::vector<Real>  enthalpydot;
@@ -46,6 +61,8 @@ public:
 
 	ParticleAttributes(const json& inputData, const json& particleData);
 
+	void addParticlesToFluid();
+
 //  This should only work for fluid particles
 	inline Real getT0(){ 		  		 return parDataIn["T0"];}
 	inline Real3 getv0(){                return Real3{parDataIn["v0"][0],parDataIn["v0"][1],parDataIn["v0"][2]};}
@@ -55,6 +72,8 @@ public:
 	inline Real getMu(){				 return parDataIn["mu"];}
 	inline Real getSurfaceTensionCoeff(){ return parDataIn["surfaceTensionCoeff"];}
 	inline Real getSoundSpeed() {		 return parDataIn["soundSpeed"];}
+	inline Real getOneOverLambda(){      return 1./(Real)parDataIn["lambda"];}
+	inline Real getEta(){                return (Real)parDataIn["eta"];}
 	inline Real getThermalExpansion() {  return parDataIn["thermalExpansion"];}
 	inline Real getViscosity(){          return parDataIn["viscosity"];}
 	inline std::string getType(){        return parDataIn["type"];}
@@ -63,9 +82,14 @@ private:
 	std::vector<Real> x,y,z,vx,vy,vz;
 	const json& simDataIn, parDataIn;
 
+	const Real3   zeroVector{0,0,0};
+	const Real3x3 zeromat{Real3{0,0,0},Real3{0,0,0},Real3{0,0,0}};
+
 	void initParticles();
 	void fluidInit();
 	void boundaryInit();
+	void addDefaultFluidParticleAtPosition(Real3& posToAdd);
+	void addDefaultFluidParticleAtPosition(Real3& posToAdd, Real temp);
 	void readInitialPlacement(std::string fileName);
 };
 

@@ -26,6 +26,7 @@ int main ( void ){
 	readJSON(boundaryDataInput, "../inputs/boundary.json");
 
 	if( simDataInput["operation"] == "SPHSimulation" ){
+		
 		std::cout << ">>> Operation : SPHSimulation" << std::endl;
 
 		pData["fluid"] = new ParticleAttributes(simDataInput, fluidDataInput);
@@ -45,6 +46,7 @@ int main ( void ){
 
 			for(int t=0;t<(Uint)simDataInput["steps"];t++){
 
+				solver.addFluidInletParticles(t);
 				solver.neighborSearch();
 				solver.marchTime(t);
 
