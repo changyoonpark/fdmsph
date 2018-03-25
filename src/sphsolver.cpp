@@ -136,7 +136,6 @@ void SPHSolver::initializeMass(){
 			}
 			kernelSum += W_ij(0.0,smoothingLength);
 
-			pData[setName_i]->normalVec[i][0] = (Real)ps_i.n_neighbors(ids["fluid"],i);			
 			pData[setName_i]->vol[i]  = (1.0/kernelSum);
 			totVol += pData[setName_i]->vol[i];
 			pData[setName_i]->mass[i] =  pData[setName_i]->dens[i] * pData[setName_i]->vol[i];
@@ -354,12 +353,11 @@ void SPHSolver::neighborSearch(){
 
 }
 
-
-
 void SPHSolver::computeInteractions(){
 	using namespace RealOps;
 	// The fluid.
 	const Real dx = (Real) simData["dx"];
+	const Real dt = (Real) simData["dt"];
 	const Uint dims = simData["dimensions"];
 	const Real smoothingLength = (Real) simData["smoothingLength"];
 
@@ -374,6 +372,7 @@ void SPHSolver::computeInteractions(){
 
 	const Real3 zerovec{0.0,0.0,0.0};
 	const Real3x3 zeromat{zerovec,zerovec,zerovec};
+	const Real3x3x3 zeroijk{zeromat,zeromat,zeromat};
 
 	std::cout << "		|------ ... Performing Fluid - (Fluid / Boundary) Interactions"<< std::endl;
 
@@ -391,6 +390,7 @@ void SPHSolver::computeInteractions(){
 
 			Real    m_i  = pData[setName_i]->mass[i];
 			Real  rho_i  = pData[setName_i]->dens[i];
+			Real3& pos_i = pData[setName_i]->pos[i];
 
 			// Renormalization Tensor (First Derivative)
 			MatrixXd _L_i(3,3); _L_i = MatrixXd::Zero(3,3);
@@ -411,12 +411,17 @@ void SPHSolver::computeInteractions(){
 			// Renormalized Density Gradient.
 			pData[setName_i]->densGrad[i] = zerovec;
 
+			// Initialize Tau Gradient
+			pData[setName_i]->tauGrad[i] = zeroijk;
+
 			// Clear the time derivatives.ff
 			pData[setName_i]->tauDot[i]  = zeromat;
 			pData[setName_i]->velGrad[i] = zeromat;
 			pData[setName_i]->acc[i] = Real3{0.0,0.0,0.0};
 			pData[setName_i]->densdot[i] = 0.0;
 			pData[setName_i]->enthalpydot[i] = 0.0;
+			pData[setName_i]->particleDensity[i] = 0.0;
+			pData[setName_i]->normalVec[i] = zerovec;
 
 			// FIRST PHASE.
 
@@ -457,10 +462,37 @@ void SPHSolver::computeInteractions(){
 					pData[setName_i]->velGrad[i][1] = add(pData[setName_i]->velGrad[i][1], mult( (pData[setName_j]->vel[j][1] - pData[setName_i]->vel[i][1]) * vol_j, gWij));
 					pData[setName_i]->velGrad[i][2] = add(pData[setName_i]->velGrad[i][2], mult( (pData[setName_j]->vel[j][2] - pData[setName_i]->vel[i][2]) * vol_j, gWij));
 
+					// Compute the gradient of the deviatoric stress				
+					pData[setName_i]->tauGrad[i][0][0] = add(pData[setName_i]->tauGrad[i][0][0], mult( (pData[setName_j]->tau[j][0][0] - pData[setName_i]->tau[i][0][0]) * vol_j, gWij));
+					pData[setName_i]->tauGrad[i][0][1] = add(pData[setName_i]->tauGrad[i][0][1], mult( (pData[setName_j]->tau[j][0][1] - pData[setName_i]->tau[i][0][1]) * vol_j, gWij));
+					pData[setName_i]->tauGrad[i][0][2] = add(pData[setName_i]->tauGrad[i][0][2], mult( (pData[setName_j]->tau[j][0][2] - pData[setName_i]->tau[i][0][2]) * vol_j, gWij));
 
+					pData[setName_i]->tauGrad[i][1][0] = add(pData[setName_i]->tauGrad[i][1][0], mult( (pData[setName_j]->tau[j][1][0] - pData[setName_i]->tau[i][1][0]) * vol_j, gWij));
+					pData[setName_i]->tauGrad[i][1][1] = add(pData[setName_i]->tauGrad[i][1][1], mult( (pData[setName_j]->tau[j][1][1] - pData[setName_i]->tau[i][1][1]) * vol_j, gWij));
+					pData[setName_i]->tauGrad[i][1][2] = add(pData[setName_i]->tauGrad[i][1][2], mult( (pData[setName_j]->tau[j][1][2] - pData[setName_i]->tau[i][1][2]) * vol_j, gWij));
+
+					pData[setName_i]->tauGrad[i][2][0] = add(pData[setName_i]->tauGrad[i][2][0], mult( (pData[setName_j]->tau[j][2][0] - pData[setName_i]->tau[i][2][0]) * vol_j, gWij));
+					pData[setName_i]->tauGrad[i][2][1] = add(pData[setName_i]->tauGrad[i][2][1], mult( (pData[setName_j]->tau[j][2][1] - pData[setName_i]->tau[i][2][1]) * vol_j, gWij));
+					pData[setName_i]->tauGrad[i][2][2] = add(pData[setName_i]->tauGrad[i][2][2], mult( (pData[setName_j]->tau[j][2][2] - pData[setName_i]->tau[i][2][2]) * vol_j, gWij));
+
+
+					// Compute the particle density
+					pData[setName_i]->particleDensity[i] += pData[setName_j]->vol[j] * Wij;
+
+					// Compute the normal
+					pData[setName_i]->normalVec[i] = add(pData[setName_i]->normalVec[i], 
+										mult(Wij,relpos)
+									);
 
 				}
 			}
+
+			// Normalize the normal vector.
+			pData[setName_i]->normalVec[i] = normalize(pData[setName_i]->normalVec[i]);
+			const Real3 pos_T = add(pData[setName_i]->pos[i], mult(dx, pData[setName_i]->normalVec[i]));
+
+			// Compute the particle density (add contribution from self)
+			pData[setName_i]->particleDensity[i] += pData[setName_i]->vol[i] * W_ij(0, smoothingLength);
 
 			// Compute Tau Dot
 			const Real3x3 velGrad_i_T =  transpose(pData[setName_i]->velGrad[i]);
@@ -479,6 +511,7 @@ void SPHSolver::computeInteractions(){
 					)
 				);
 
+
 			// Compute the inverse of the renormalization tensor.
 			setDims(L_i,dims);
 
@@ -487,17 +520,17 @@ void SPHSolver::computeInteractions(){
 			JacobiSVD<MatrixXd> svd_L_i(_L_i);
 			Real cond_L_i = svd_L_i.singularValues()(0) / svd_L_i.singularValues()(svd_L_i.singularValues().size()-1);		
 			
-			pData[setName_i]->normalVec[i][2] = cond_L_i;			
-
-
 			_L_i = _L_i.inverse();
 			toReal3x3(_L_i,L_i);
 			
 			pData[setName_i]->densGrad[i]  = mult(L_i,pData[setName_i]->densGrad[i]);
 			pData[setName_i]->tempGrad[i]  = mult(L_i,pData[setName_i]->tempGrad[i]);
 
-
-
+			if (pData[setName_i]->particleDensity[i] < 0.95){
+				pData[setName_i]->isFS[i] = true;			
+			} else{
+				pData[setName_i]->isFS[i] = false;			
+			}
 
 			for (const auto& setName_j : setNames){
 				
@@ -511,6 +544,7 @@ void SPHSolver::computeInteractions(){
 
 					// Define all the ingedients for the particle interaction
 					Real    rho_j = pData[setName_j]->dens[j];
+					Real3&  pos_j = pData[setName_j]->pos[j];
 					Real3  relpos = sub(pData[setName_i]->pos[i],pData[setName_j]->pos[j]);
 					Real     dist = length(relpos);
 					Real3x3&  L_i = pData[setName_i]->L[i];
@@ -531,8 +565,36 @@ void SPHSolver::computeInteractions(){
 						}
 					}
 
-				}
 
+					// Determine whether the particle is a real free-surface particle:
+					if (pData[setName_i]->isFS[i]){
+
+						Real3 vec_Ti = sub(pos_T,pos_i);
+						Real3 vec_ji = sub(pos_j,pos_i);
+						Real abcos = dot(vec_Ti,vec_ji);
+						Real theta = std::acos(abcos / (dx * dist));
+						// area = (0.333*h)*(dist)*sin(theta) = (0.333*h) * sdotvec_jT
+						Real sdotvec_jT = dist * std::sin(theta);
+						if (dist >= 0.4714045 * smoothingLength && length(pos_j, pos_T) < 0.333333 * smoothingLength){
+							pData[setName_i]->isFS[i] = false;
+						} else if (dist < 0.4714045 * smoothingLength && std::abs(dot(pData[setName_i]->normalVec[i],sub(pos_j, pos_T))) + std::abs(sdotvec_jT) < 0.333333 * smoothingLength){
+							pData[setName_i]->isFS[i] = false;
+						} 
+
+					} 
+
+				}
+			}
+
+			// Compute shifting
+			if(pData[setName_i]->isFS[i]){
+				pData[setName_i]->shift[i] = mult(-1.666666 * smoothingLength * pData[setName_i]->vol[i] * dt, 
+													mult(
+														sub(identity(),tensorProduct(pData[setName_i]->normalVec[i],pData[setName_i]->normalVec[i])),
+														pData[setName_i]->particleDensityGrad[i]
+												    ));
+			}else{
+				pData[setName_i]->shift[i] = mult(-1.666666 * smoothingLength * pData[setName_i]->vol[i] * dt, pData[setName_i]->particleDensityGrad[i]);
 			}
 
 
@@ -591,7 +653,7 @@ void SPHSolver::computeInteractions(){
 			JacobiSVD<MatrixXd> svd_G_i(G);
 			Real cond_second_i = svd_G_i.singularValues()(0) / svd_G_i.singularValues()(svd_G_i.singularValues().size()-1);		
 			
-			pData[setName_i]->isFS[i] = cond_second_i;			
+			pData[setName_i]->conditionNumber[i] = cond_second_i;			
 			
 			VectorXd L2_i_vec = G.fullPivLu().solve(neg_delta_mn);
 			L2_i = toReal3x3From6(L2_i_vec,dims);
@@ -649,7 +711,7 @@ void SPHSolver::computeInteractions(){
 	        const Real3& normal_i =  pData[setName_i]->normalVec[i];
 			const Real3x3& L2_i = pData[setName_i]->L2[i];
 			const Real3x3& velGrad_i = pData[setName_i]->velGrad[i];			
-			const Real& cond_i = pData[setName_i]->isFS[i];
+			const Real& cond_i = pData[setName_i]->conditionNumber[i];
 
 
 
@@ -676,7 +738,7 @@ void SPHSolver::computeInteractions(){
 					const Real&      m_j = pData[setName_j]->mass[j];
 					const Real&    vol_j = pData[setName_j]->vol[j];
 
-					const Real3& vel_j = pData[setName_i]->vel[j];
+					const Real3& vel_j = pData[setName_j]->vel[j];
 
 					const Real3& normal_j =  pData[setName_j]->normalVec[j];
 					const Real3& tempGrad_j = pData[setName_j]->tempGrad[j];
@@ -742,11 +804,17 @@ void SPHSolver::computeInteractions(){
 					if (!isBoundary_i){
  					    // Acceleration Due to pressure gradient. (For newtonian Fluid)
 						// Real3 a = add(pressureAcc_ij(m_j,gWij,P_i,P_j,rho_i,rho_j,vol_j), viscosityAcc_ij(m_j, relpos, gWij, rho_i, rho_j,dist, relvel, mu_j));
+						
+						// Real3 a = add( pressureAcc_ij(m_j,gWij,P_i,P_j,rho_i,rho_j,vol_j), 
+						// 			   extraStress_acc_ij(m_j,gWij,rho_i,rho_j,
+						// 			   					  zeromat,
+						// 							   	  zeromat)
+						// 			  );
 
 						Real3 a = add( pressureAcc_ij(m_j,gWij,P_i,P_j,rho_i,rho_j,vol_j), 
 									   extraStress_acc_ij(m_j,gWij,rho_i,rho_j,
 									   					  pData[setName_i]->tau[i],
-													   	  pData[setName_i]->tau[j])
+													   	  pData[setName_j]->tau[j])
 									  );
 						
             			// Interparticle forces, (IFF surface tension model).
@@ -807,7 +875,7 @@ void SPHSolver::marchTime(Uint t){
 
 		if( setName == "fluid"){
 		// Fluid Particles    : march the position, velocity, density.
-			#pragma omp parallel for num_threads(NUMTHREADS)
+			#pragma omp parallel for num_threads(NUMTHREADS) 
 			for (int i = 0; i < ps.n_points(); ++i){
 
 				pData[setName]->vel[i]  = add(pData[setName]->vel[i], mult(dt * 0.5,pData[setName]->acc[i]));
@@ -847,6 +915,15 @@ void SPHSolver::marchTime(Uint t){
 				pData[setName]->dens[i] = pData[setName]->dens[i] + dt * 0.5 * pData[setName]->densdot[i];
 				pData[setName]->temp[i] = pData[setName]->temp[i] + dt * 0.5 * pData[setName]->enthalpydot[i];
 				pData[setName]->tau[i]  = add(pData[setName]->tau[i],mult(dt * 0.5, pData[setName]->tauDot[i]));
+
+				// Apply shifting
+				Real3& r_i = pData[setName]->shift[i];
+
+				pData[setName]->pos[i]   = add(pData[setName]-> pos[i] , r_i);
+				pData[setName]->dens[i]  =     pData[setName]->dens[i] + dot (pData[setName]->densGrad[i] , r_i);
+				pData[setName]->vel[i]   = add(pData[setName]-> vel[i] , mult(pData[setName]-> velGrad[i] , r_i));
+				pData[setName]->tau[i]   = add(pData[setName]-> tau[i] , mult(pData[setName]-> tauGrad[i] , r_i));
+				pData[setName]->temp[i]  =     pData[setName]->temp[i] + dot (pData[setName]->tempGrad[i] , r_i);
 
 			}
 

@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <CompactNSearch>
 #include <chrono>
+// #include <math>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 #include "json.hpp"

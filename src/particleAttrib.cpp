@@ -33,8 +33,6 @@ void ParticleAttributes::readInitialPlacement(std::string fileName){
 	H5PartReadDataFloat64(fileReader,"y",&y[0]);
 	H5PartReadDataFloat64(fileReader,"z",&z[0]);
 
-	const Real3 zeroVector{0,0,0};
-	const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 	int n = 0;
   	smoothingLength = simDataIn["smoothingLength"];
 	numParticles = 0;
@@ -138,8 +136,6 @@ std::cout << "... Computing Volume that should be used (2D) " << std::endl;
 				for (int k = offset; k <= (int)((z1 - z0)/dx) - offset; k ++ ){
 
 					Real3 posToAdd{x0 + dx * i, 0, z0 + dx * k};
-					const Real3 zeroVector{0,0,0};
-					const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
 
 					if ( (posToAdd[0] >= x0 + wallt - 0.99 * offset * dx && posToAdd[0] <= x1 - wallt + 0.99 * offset *  dx ) &&
 					     (posToAdd[2] >= z0 + wallt - 0.99 * offset * dx && posToAdd[2] <= z1 - wallt + 0.99 * offset *  dx ) ) continue;
@@ -208,8 +204,6 @@ std::cout << "... Computing Volume that should be used (2D) " << std::endl;
 				for (int k = offset; k <= (int)((y1 - y0)/dx) - offset; k ++ ){
 
 					Real3 posToAdd{x0 + dx * i, y0 + dx * k, 0};
-					const Real3 zeroVector{0,0,0};
-					const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};					
 					addDefaultFluidParticleAtPosition(posToAdd,getT0());
 					n+=1;
 
@@ -246,7 +240,8 @@ void ParticleAttributes::fluidInit(){
 							    (Real) parDataIn["inlet"]["tangent"][1], 0 };				
 
 		inletVelocity = Real3 { (Real) parDataIn["inlet"]["vel"] * (Real) parDataIn["inlet"]["normal"][0],
-		 						(Real) parDataIn["inlet"]["vel"] * (Real) parDataIn["inlet"]["normal"][1], 0};
+		 						(Real) parDataIn["inlet"]["vel"] * (Real) parDataIn["inlet"]["normal"][1], 
+								0};
 
 		inletSpeed = length(inletVelocity);
 
@@ -328,6 +323,7 @@ void ParticleAttributes::fluidInit(){
 
 			Real3 zeroVector{0,0,0};
 			Real3x3 zeromat{zeroVector,zeroVector,zeroVector};
+			Real3x3x3 zeroijk{zeromat,zeromat,zeromat};
 			Real3 _perturb{0,0,0};
 
 			Real3 posToAdd{x0 + dx * (Real)i,
@@ -351,8 +347,6 @@ void ParticleAttributes::fluidInit(){
 		std::string fileName = parDataIn["geometry"]["file"];
 		json pointCloud;
 		readJSON(pointCloud, fileName);
-		const Real3 zeroVector{0,0,0};
-		const Real3x3 zeromat{zeroVector,zeroVector,zeroVector};		
 		Uint n = 0;
 		numParticles = 0;		
 		for(int i = 0; i < pointCloud.size(); i++){
@@ -391,8 +385,10 @@ void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd){
 
 	mass.push_back(defaultMass);
 	vol.push_back(defaultVolume);
+	particleDensity.push_back(0);
+	particleDensityGrad.push_back(zeroVector);
 	perturb.push_back(zeroVector);
-
+	shift.push_back(zeroVector);
 	pos.push_back(posToAdd);
 	vel.push_back(inletVelocity);
 	acc.push_back(zeroVector);
@@ -402,13 +398,15 @@ void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd){
 	tempGrad.push_back(zeroVector);
 	normalVec.push_back(zeroVector);
 	temp.push_back(getT0());
-	isFS.push_back(0);
+	isFS.push_back(false);
+	conditionNumber.push_back(0);
 	curvature.push_back(0);
 	L.push_back(zeromat);
 	L2.push_back(zeromat);	
 	velGrad.push_back(zeromat);
 	tau.push_back(zeromat);
 	tauDot.push_back(zeromat);
+	tauGrad.push_back(zeroijk);
 
 	enthalpy.push_back(0);
 	enthalpydot.push_back(0);
@@ -426,8 +424,10 @@ void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd, Real
 
 	mass.push_back(defaultMass);
 	vol.push_back(defaultVolume);
+	particleDensity.push_back(0);
+	particleDensityGrad.push_back(zeroVector);
 	perturb.push_back(zeroVector);
-
+	shift.push_back(zeroVector);
 	pos.push_back(posToAdd);
 	vel.push_back(inletVelocity);
 	acc.push_back(zeroVector);
@@ -437,13 +437,15 @@ void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd, Real
 	tempGrad.push_back(zeroVector);
 	normalVec.push_back(zeroVector);
 	temp.push_back(temperature);
-	isFS.push_back(0);
+	isFS.push_back(false);
+	conditionNumber.push_back(0);
 	curvature.push_back(0);
 	L.push_back(zeromat);
 	L2.push_back(zeromat);	
 	velGrad.push_back(zeromat);
 	tau.push_back(zeromat);
 	tauDot.push_back(zeromat);
+	tauGrad.push_back(zeroijk);
 
 	enthalpy.push_back(0);
 	enthalpydot.push_back(0);

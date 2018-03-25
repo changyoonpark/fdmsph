@@ -39,22 +39,26 @@ public:
 	}
 	void write(std::map<std::string,ParticleAttributes*> &pData, Real smoothingLength){
 		int totalParticles = 0;
-		std::vector<double> h,x,y,z,vx,vy,vz,dens,temp,heatSensed,fxSensed,fySensed,fzSensed,isSensor;
-		std::vector<double> nx,ny,nz,isFS,tgx,tgy,tgz,curvature,hdot,px,py,pz,vol,mass;
+		std::vector<double> h,x,y,z,vx,vy,vz,dens,temp,heatSensed,fxSensed,fySensed,fzSensed,isSensor,densDot,ax,ay,az;
+		std::vector<double> rx,ry,rz,nx,ny,nz,isFS,tgx,tgy,tgz,curvature,hdot,px,py,pz,vol,mass,particleDensity;
 
 		for (const auto& dataType : pData) totalParticles += dataType.second->numParticles;
 		std::cout << "... Writing Results to " << currentFileName << std::endl;
 		std::cout << "... Total Particles to Write : " << totalParticles << std::endl;
 
-		x.resize(totalParticles); vx.resize(totalParticles);
-		y.resize(totalParticles); vy.resize(totalParticles);
-		z.resize(totalParticles); vz.resize(totalParticles);
+		x.resize(totalParticles); vx.resize(totalParticles); rx.resize(totalParticles);
+		y.resize(totalParticles); vy.resize(totalParticles); ry.resize(totalParticles);
+		z.resize(totalParticles); vz.resize(totalParticles); rz.resize(totalParticles);
 
 		px.resize(totalParticles);
 		py.resize(totalParticles);
 		pz.resize(totalParticles);
 
 		isFS.resize(totalParticles);
+		
+
+		particleDensity.resize(totalParticles);
+
 		curvature.resize(totalParticles);
 		nx.resize(totalParticles);
 		ny.resize(totalParticles);
@@ -64,6 +68,10 @@ public:
 		tgy.resize(totalParticles);
 		tgz.resize(totalParticles);
 
+		ax.resize(totalParticles);
+		ay.resize(totalParticles);
+		az.resize(totalParticles);
+
 		hdot.resize(totalParticles);
 
 		mass.resize(totalParticles);
@@ -71,6 +79,8 @@ public:
 
 		h.resize(totalParticles);
 		dens.resize(totalParticles); temp.resize(totalParticles);
+		densDot.resize(totalParticles);
+
 		isSensor.resize(totalParticles);
 		heatSensed.resize(totalParticles);
 		fxSensed.resize(totalParticles);
@@ -83,13 +93,18 @@ public:
 			#pragma omp parallel for num_threads(NUMTHREADS)
 			for (int i = idx; i < idx + dataType.second->numParticles; i++ ){
 
-				x[i] = dataType.second->pos[i - idx][0]; vx[i] = dataType.second->vel[i - idx][0];
-				y[i] = dataType.second->pos[i - idx][1]; vy[i] = dataType.second->vel[i - idx][1];
-				z[i] = dataType.second->pos[i - idx][2]; vz[i] = dataType.second->vel[i - idx][2];
-
+				x[i] = dataType.second->pos[i - idx][0]; vx[i] = dataType.second->vel[i - idx][0]; rx[i] = dataType.second->shift[i - idx][0];				
+				y[i] = dataType.second->pos[i - idx][1]; vy[i] = dataType.second->vel[i - idx][1]; ry[i] = dataType.second->shift[i - idx][1];			
+				z[i] = dataType.second->pos[i - idx][2]; vz[i] = dataType.second->vel[i - idx][2]; rz[i] = dataType.second->shift[i - idx][2];
+				
 				px[i] = dataType.second->perturb[i - idx][0];
 				py[i] = dataType.second->perturb[i - idx][1];
 				pz[i] = dataType.second->perturb[i - idx][2];
+
+				ax[i] = dataType.second->acc[i - idx][0];
+				ay[i] = dataType.second->acc[i - idx][1];
+				az[i] = dataType.second->acc[i - idx][2];
+
 
 				nx[i] = dataType.second->normalVec[i - idx][0];
 				ny[i] = dataType.second->normalVec[i - idx][1];
@@ -101,9 +116,12 @@ public:
 
 				hdot[i] = dataType.second->enthalpydot[i - idx];
 
-				isFS[i] = dataType.second->isFS[i - idx];
+				isFS[i] = dataType.second->isFS[i - idx] ? 1.0 : 0.0;
+				particleDensity[i] = dataType.second->particleDensity[i - idx];
+
 				curvature[i] = dataType.second->curvature[i - idx];
 				dens[i] = dataType.second->dens[i - idx];
+				densDot[i] = dataType.second->densdot[i - idx];
 				mass[i] = dataType.second->mass[i - idx];
 				vol[i] = dataType.second->vol[i - idx]; 
 				h[i] = smoothingLength;
@@ -134,6 +152,14 @@ public:
 		H5PartWriteDataFloat64(fileWriter,"y",&y[0]);
 		H5PartWriteDataFloat64(fileWriter,"z",&z[0]);
 
+		H5PartWriteDataFloat64(fileWriter,"ax",&ax[0]);
+		H5PartWriteDataFloat64(fileWriter,"ay",&ay[0]);
+		H5PartWriteDataFloat64(fileWriter,"az",&az[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"rx",&rx[0]);
+		H5PartWriteDataFloat64(fileWriter,"ry",&ry[0]);
+		H5PartWriteDataFloat64(fileWriter,"rz",&rz[0]);
+
 		H5PartWriteDataFloat64(fileWriter,"px",&px[0]);
 		H5PartWriteDataFloat64(fileWriter,"py",&py[0]);
 		H5PartWriteDataFloat64(fileWriter,"pz",&pz[0]);
@@ -153,8 +179,11 @@ public:
 		H5PartWriteDataFloat64(fileWriter,"curvature",&curvature[0]);
 
 		H5PartWriteDataFloat64(fileWriter,"dens",&dens[0]);
+		H5PartWriteDataFloat64(fileWriter,"densityDot",&densDot[0]);
 		H5PartWriteDataFloat64(fileWriter,"mass",&mass[0]);
 		H5PartWriteDataFloat64(fileWriter,"vol",&vol[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"particleDensity",&particleDensity[0]);
 
 		H5PartWriteDataFloat64(fileWriter,"h",&h[0]);
 		H5PartWriteDataFloat64(fileWriter,"temp",&temp[0]);

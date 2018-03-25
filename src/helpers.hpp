@@ -29,7 +29,7 @@ namespace RealOps{
 
 	using Real3 = std::array<Real,3>;
 	using Real3x3 = std::array<Real3,3>;
-
+	using Real3x3x3 = std::array<Real3x3,3>;
 	
 	// (0,0) (0,1) (0,2)
 	// (1,0) (1,1) (1,2)
@@ -134,6 +134,20 @@ namespace RealOps{
 	    return Real3{c * a[0], c * a[1], c * a[2]};
 	}
 
+	inline Real3x3 mult( Real3x3x3 c, Real3 a) {
+	    return Real3x3{Real3{c[0][0][0]*a[0] + c[0][0][1]*a[1] + c[0][0][2]*a[2], 
+							 c[0][1][0]*a[0] + c[0][1][1]*a[1] + c[0][1][2]*a[2], 
+							 c[0][2][0]*a[0] + c[0][2][1]*a[1] + c[0][2][2]*a[2]},
+
+					   Real3{c[1][0][0]*a[0] + c[1][0][1]*a[1] + c[1][0][2]*a[2], 
+							 c[1][1][0]*a[0] + c[1][1][1]*a[1] + c[1][1][2]*a[2], 
+							 c[1][2][0]*a[0] + c[1][2][1]*a[1] + c[1][2][2]*a[2]},
+
+					   Real3{c[2][0][0]*a[0] + c[2][0][1]*a[1] + c[2][0][2]*a[2], 
+							 c[2][1][0]*a[0] + c[2][1][1]*a[1] + c[2][1][2]*a[2], 
+							 c[2][2][0]*a[0] + c[2][2][1]*a[1] + c[2][2][2]*a[2]}};
+	}
+
 	// cij = aik*bkj
 	inline Real3x3 mult( const Real3x3& a, const Real3x3& b) {
 	    return Real3x3{Real3{a[0][0]*b[0][0]+a[0][1]*b[1][0]+a[0][2]*b[2][0], 
@@ -175,8 +189,24 @@ namespace RealOps{
 	    return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
 	}
 
+	inline Real3 normalize( const Real3& a ){
+		Real l = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) + EPSL_SMALL;
+		if ( l < 1.E-4){
+			return Real3{0,0,0};
+		} else{
+		return Real3{ a[0]/l,
+					  a[1]/l,
+					  a[2]/l
+					};
+		}
+	}
+
 	inline Real length( const std::array<Real,3>& a ) {
 	    return std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+	}
+
+	inline Real length( const std::array<Real,3>& a , const std::array<Real,3>& b) {
+	    return std::sqrt( (a[0]-b[0]) * (a[0]-b[0]) + (a[1]-b[1]) * (a[1]-b[1]) + (a[2]-b[2]) * (a[2]-b[2]));
 	}
 
 	inline Real length2( const std::array<Real,3>& a ) {
@@ -273,6 +303,9 @@ namespace RealOps{
 		return b;
 	}
 
+	inline Real3x3 identity(){
+		return Real3x3{Real3{1.0,0.0,0.0},Real3{0.0,0.0,0.0},Real3{0.0,0.0,1.0}};
+	}
 
  	inline Real3x3 tensorProduct(Real3& a, Real3& b){
  		Real3x3 c;
@@ -550,6 +583,10 @@ namespace RealOps{
  	inline Real constantConductivity(std::string type, Real T){
  		return 1.0;
  	}
+
+	inline Real3 gradient(Real quantityi, Real quantityj, Real3 gWij, Real volj){
+		return mult((quantityj-quantityi)*volj, gWij);
+	}
 
  	inline Real cleary(Real Ti, Real Tj, Real mj, Real rho_i, Real rho_j, Real ki, Real kj, Real3 relpos, Real dist, Real3 gWij){
  		return 4.0 * mj * ki * kj * (Ti - Tj) * dot(relpos, gWij) / (rho_i * rho_j * (ki + kj) * (dist * dist));
