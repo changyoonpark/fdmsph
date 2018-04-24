@@ -11,6 +11,7 @@ add_executable(FDMSPH
     poissonsample.hpp
     geometrygeneration.cpp
     geometrygeneration.hpp
+    vvector.h
 )
 
 target_link_libraries(FDMSPH CompactNSearch)

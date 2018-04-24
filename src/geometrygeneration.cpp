@@ -80,7 +80,6 @@ namespace GeometryGeneration{
 		std::vector<Real3> samples = thinks::poissonDiskSampling(dx, p1, p2);
 		int totalParticles = 0;
 		for (;;){
-
             std::mt19937 rng;
             rng.seed(std::random_device()());
             std::uniform_int_distribution<std::mt19937::result_type> dist(0,samples.size()-1);
@@ -91,6 +90,7 @@ namespace GeometryGeneration{
             totalParticles ++;
             if(totalParticles >= n) break;
 		}
+        std::cout << "... Generation complete.." << std::endl;
     }
 
     void uniformCylinder(Real3 origin, Real length, Real radius, Uint nr, Uint nd, Real dx,
@@ -218,7 +218,7 @@ namespace GeometryGeneration{
                 
             } else if (simDataInput["dimensions"] == 2){
                 for (int i = 0; i < x.size(); i++){
-                    y[i] = 0;
+                    z[i] = 0;
                 }
             }
 

@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 #include <math.h>
 #include "json.hpp"
+#include "vvector.h"
 
 #define NUMTHREADS 4
 #define MAX_NEIGHBORS 500
@@ -27,10 +28,14 @@ namespace RealOps{
 	using namespace CompactNSearch;
 	using namespace Eigen;
 
-	using Real3 = std::array<Real,3>;
-	using Real3x3 = std::array<Real3,3>;
-	using Real3x3x3 = std::array<Real3x3,3>;
-	
+	using Real4      = std::array<Real,4>;
+
+	using Real3      = std::array<Real,3>;
+	using Real3x3    = std::array<Real3,3>;
+	using Real3x3x3  = std::array<Real3x3,3>;
+
+	using Real6      = std::array<Real,6>;
+	using Real6x6    = std::array<Real6,6>;
 	// (0,0) (0,1) (0,2)
 	// (1,0) (1,1) (1,2)
 	// (2,0) (2,1) (2,2)
@@ -60,6 +65,13 @@ namespace RealOps{
 		
 		for(int i=0;i<3;i++) for(int j=0;j<3;j++)
 			a[i][j] = b(i,j);
+		
+	}
+
+	inline void toReal3 (MatrixXd b, Real3& a){
+		
+		for(int i=0;i<3;i++)
+			a[i] = (Real)b(i);
 		
 	}
 
@@ -115,6 +127,7 @@ namespace RealOps{
 			b[i][j] = a(i,j);
 	}
 
+
 	inline std::array<Real,3> add( const std::array<Real,3>& a,  const std::array<Real,3>& b) {
 	    return std::array<Real,3>{a[0]+b[0],a[1]+b[1],a[2]+b[2]};
 	}
@@ -125,10 +138,16 @@ namespace RealOps{
 	}
 
 	inline Real3x3 sub( Real3x3 a,  Real3x3 b) {
-		return Real3x3{Real3{a[0][0] - b[0][0],a[0][1] - b[0][1],a[0][2] - b[0][2]},
-					   Real3{a[1][0] - b[1][0],a[1][1] - b[1][1],a[1][2] - b[1][2]},
-					   Real3{a[2][0] - b[2][0],a[2][1] - b[2][1],a[2][2] - b[2][2]}};
+		return Real3x3{sub(a[0],b[0]),
+					   sub(a[1],b[1]),
+					   sub(a[2],b[2])};
 	}
+
+	// inline Real3x3 sub( Real3x3 a,  Real3x3 b) {
+	// 	return Real3x3{Real3{a[0][0] - b[0][0],a[0][1] - b[0][1],a[0][2] - b[0][2]},
+	// 				   Real3{a[1][0] - b[1][0],a[1][1] - b[1][1],a[1][2] - b[1][2]},
+	// 				   Real3{a[2][0] - b[2][0],a[2][1] - b[2][1],a[2][2] - b[2][2]}};
+	// }
 
 	inline Real3 mult( Real c, Real3 a) {
 	    return Real3{c * a[0], c * a[1], c * a[2]};
@@ -147,6 +166,13 @@ namespace RealOps{
 							 c[2][1][0]*a[0] + c[2][1][1]*a[1] + c[2][1][2]*a[2], 
 							 c[2][2][0]*a[0] + c[2][2][1]*a[1] + c[2][2][2]*a[2]}};
 	}
+
+	inline Real3 mult( Real3x3x3 a, Real3x3 b) {
+		Real3 c{0,0,0};
+		for (int i=0;i<3;i++) for(int j=0;j<3;j++) for(int k=0;k<3;k++) c[i] = c[i] + a[i][j][k] * b[j][k];
+	    return c;
+	}
+
 
 	// cij = aik*bkj
 	inline Real3x3 mult( const Real3x3& a, const Real3x3& b) {
@@ -249,6 +275,10 @@ namespace RealOps{
 	    return Real3x3 { add(a[0],b[0]), add(a[1],b[1]), add(a[2],b[2])};
 	}
 
+	inline Real3x3x3 add( Real3x3x3 a,  Real3x3x3 b) {
+	    return Real3x3x3 { add(a[0],b[0]), add(a[1],b[1]), add(a[2],b[2])};
+	}
+
 	inline Real3x3 transpose( const Real3x3 a){
 		// return Real3x3{ Real3{a[0][0],a[0][1],a[0][2]},
 		// 				   Real3{a[1][0],a[1][1],a[1][2]},
@@ -270,6 +300,20 @@ namespace RealOps{
 	// 				     Real3{a[1][0] + b[1][0],a[1][1] + b[1][1],a[1][2] + b[1][2]},
 	// 				     Real3{a[2][0] + b[2][0],a[2][1] + b[2][1],a[2][2] + b[2][2]} };
 	// }
+
+	inline Real6 toVoigt(Real3x3& a, Uint dims){
+		return Real6{a[0][0], a[1][1], a[2][2], a[0][1], a[1][2], a[0][2]};
+	}
+
+	// inline Real6x6 stiffnessTensor(Real& shear, Real& bulk){
+	// 	return Real6x6{Real6{	2 * shear + bulk, bulk, bulk,	0,	0,	0,},
+	// 				   Real6{   bulk, 2 * shear + bulk, bulk,	0,	0,	0,},
+	// 				   Real6{	bulk, bulk, 2 * shear + bulk,	0,	0,	0,},
+	// 				   Real6{	0,	0,	0, bulk,	0,	0,},
+	// 				   Real6{	0,	0,	0,	0, bulk,	0,},
+	// 				   Real6{	0,	0,	0,	0,	0, bulk,}};
+	// }
+
 	inline void setDims(Real3x3& a,Uint dims){
 		if (dims == 2){
 										   a[0][2] = 0.0; 
@@ -291,20 +335,30 @@ namespace RealOps{
 		}
 	}
 
-	inline Real3x3 inv( Real3x3& a, Uint dims){
+	inline Real3x3 inv3x3( Real3x3& a, Uint dims){
 		Real3x3 b;
 		Real a11 = a[0][0], a12 = a[0][1], a13 = a[0][2];
 		Real a21 = a[1][0], a22 = a[1][1], a23 = a[1][2];
 		Real a31 = a[2][0], a32 = a[2][1], a33 = a[2][2];
-		Real d = a11 * (a33 * a22 - a32 * a23) - a21 * (a33 * a12 - a32 * a13) + a31 * (a23 * a12 - a22 * a13);
+		Real d = a11 * (a33 * a22 - a32 * a23) - a12 * (a21 * a33 - a23 * a31) + a13 * (a21 * a32 - a22 * a31);
 		b[0][0] =  (a33 * a22 - a32 * a23)/d,  b[0][1] = - (a33 * a12 - a32 * a13)/d, b[0][2] =  (a23 * a12 - a22 * a13)/d;
 		b[1][0] = -(a33 * a21 - a31 * a23)/d,  b[1][1] =   (a33 * a11 - a31 * a13)/d, b[1][2] = -(a23 * a11 - a21 * a13)/d;
 		b[2][0] =  (a32 * a21 - a31 * a22)/d,  b[2][1] = - (a32 * a11 - a31 * a12)/d, b[2][2] =  (a22 * a11 - a21 * a12)/d;
 		return b;
 	}
 
+	inline Real det3x3( Real3x3& a){
+		return    a[0][0] * (a[2][2] * a[1][1] - a[2][1] * a[1][2]) 
+			    - a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0]) 
+			    + a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0]);
+	}
+
+	inline Real trace( Real3x3& a){	
+		return a[0][0] + a[1][1] + a[2][2];
+	}
+
 	inline Real3x3 identity(){
-		return Real3x3{Real3{1.0,0.0,0.0},Real3{0.0,0.0,0.0},Real3{0.0,0.0,1.0}};
+		return Real3x3{Real3{1.0,0.0,0.0},Real3{0.0,1.0,0.0},Real3{0.0,0.0,1.0}};
 	}
 
  	inline Real3x3 tensorProduct(Real3& a, Real3& b){
@@ -321,6 +375,13 @@ namespace RealOps{
 
  		return c;
  	}
+
+	inline Real3x3x3 tensorProduct(Real3x3 a, Real3 b){
+		Real3x3x3 c;
+		for(int i=0;i<3;i++) for(int j=0;j<3;j++) for(int k=0;k<3;k++)
+			c[i][j][k] = a[i][j] * b[k];
+		return c;
+	}
 
 	inline void checkSingularity(Real3x3& L_i){
 
@@ -373,6 +434,54 @@ namespace RealOps{
 			return res;
 		}
  	}
+
+	inline Real W_CubicSpline_2D_h(Real dist, Real smoothingLength){
+ 		Real q = (dist / smoothingLength);
+		Real bar = (1.0-q);
+ 		if (q > 1.0){
+ 			return  0;
+ 		} else if (q > 0.5){
+			return 3.6378272706718933890 * bar * bar * bar;
+		} else{
+			Real foo = (0.5 - q);
+			return 3.6378272706718933890 * (bar * bar * bar - 4.0 * foo * foo * foo);
+		}
+	}
+
+
+	inline Real W_Wendland6_2D_h(Real dist, Real smoothingLength){
+		Real h = smoothingLength / 2.0;
+		Real q = (dist / h);
+		if(q > 2.0){
+			return 0.0;			
+		} else{
+			Real foo = (1.0 - q / 2.0);
+			Real bar = foo * foo;
+			return (0.88672039722627401357 / (h * h)) * (bar * bar * bar * bar) * (1.0 + 4.0 * q + 6.25 * q * q + 4.0 * q * q * q);
+		}
+	}
+
+	inline Real3 gW_Wendland6_2D_h(Real dist, Real3 dir, Real smoothingLength){
+
+		Real h = smoothingLength / 2.0;
+		if(dist / h > 2.0){
+			return Real3{0,0,0};			
+		}
+
+		Real foo = (2.0 * h - dist);
+		Real foo7 = foo * foo * foo * foo * foo * foo * foo;
+
+		Real h13 = h * h * h * h;
+			 h13 = h13 * h13 * h13 * h;
+
+		Real3 res = mult(
+							- 0.019050633534158230760 * foo7 * dist * (2.0 * h * h + 7.0 * h * dist + 8.0 * dist * dist) / h13,
+							  dir
+						);
+
+		return res;
+	}
+
 
  	inline Real W_Wendland_3D_2h(Real dist, Real smoothingLength){
  		Real h = smoothingLength * 0.5;
@@ -542,6 +651,24 @@ namespace RealOps{
 
  	inline Real fixedViscosity(Real mu, Real T){return mu;}
 
+	inline Real3x3 tensorViscosity_ij(Real Cl, Real Cq, Real smoothingLength, Real soundSpeed, 
+								   Real3x3 velGrad_i, Real3x3 velGrad_j){
+
+		Real3x3 velGrad_ij = sub(velGrad_i, velGrad_j); 
+		return transpose(  
+						   add( mult(-Cl * smoothingLength * soundSpeed, transpose(velGrad_ij)),
+								mult( Cq * smoothingLength * smoothingLength, mult(velGrad_ij, velGrad_ij))
+				              )
+						);
+	} 
+
+	inline Real scalarViscosity_ij(Real Cl, Real Cq, Real smoothingLength, Real soundSpeed, 
+								   Real3 relPos, Real3 relVel){
+		Real3 eta = mult(1./(smoothingLength), relPos);
+		Real mu = (1.0 / (length2(eta) + 0.001 * smoothingLength)) * dot(relVel, eta) ;
+		return (-Cl * soundSpeed * mu + Cq * mu * mu);
+	}
+
  	inline Real linearEOS(Real T, Real T0, Real rho, Real rho0, Real c, Real alpha){
  		return c * c * ( (rho - rho0) + alpha * (T - T0) );
  	}
@@ -616,7 +743,7 @@ namespace RealOps{
 	}
 
  	inline Real3 gravity_acc(){
- 		return Real3{0.0,0.0,-10.0};
+ 		return Real3{0.0,-10.0,0.0};
  	}
 
  	struct SymTensor3{

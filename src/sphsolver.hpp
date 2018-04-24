@@ -56,7 +56,21 @@ public:
 	// void calculateViscousForce();
 	// void calculateHeatTransfer();
 private:
-	void computeInteractions();
+	const Real3 zerovec{0.0,0.0,0.0};
+	const Real3x3 zeromat{zerovec,zerovec,zerovec};
+	const Real3x3x3 zeroijk{zeromat,zeromat,zeromat};
+
+	void setInitialConfigurationNeighbors();
+	void setInitialDeformation();
+	void computeInteractions(Uint t);
+	void fixedPointIteration(Uint t);
+	void XSPH(Uint t);
+	void polarDecompose(MatrixXd& F, MatrixXd& R, MatrixXd& U);
+	void getStretch(MatrixXd& U, Real3& lambdas, Real3x3& dirs, Real3x3& dirs_before);
+	void smearDefGrad(Uint t);
+	void smearStress(Uint t);
+	void smearVelocity(Uint t);
+	void computeDeformationGradient(Uint t);
 
 	std::function<Real(std::string type, Real T)> thermalConductivity;
 

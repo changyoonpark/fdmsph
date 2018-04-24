@@ -40,7 +40,16 @@ public:
 	void write(std::map<std::string,ParticleAttributes*> &pData, Real smoothingLength){
 		int totalParticles = 0;
 		std::vector<double> h,x,y,z,vx,vy,vz,dens,temp,heatSensed,fxSensed,fySensed,fzSensed,isSensor,densDot,ax,ay,az;
+		std::vector<double> fxx,fxy,fxz,fyx,fyy,fyz,fzx,fzy,fzz; 
+		std::vector<double> sxx,sxy,sxz,syx,syy,syz,szx,szy,szz; 
+		std::vector<double> xo,yo,zo;
+		std::vector<double> cond;
 		std::vector<double> rx,ry,rz,nx,ny,nz,isFS,tgx,tgy,tgz,curvature,hdot,px,py,pz,vol,mass,particleDensity;
+
+		std::vector<double> e1x,e1y,e1z;
+		std::vector<double> e2x,e2y,e2z;
+		std::vector<double> e3x,e3y,e3z;
+		std::vector<double> lambdax,lambday,lambdaz;
 
 		for (const auto& dataType : pData) totalParticles += dataType.second->numParticles;
 		std::cout << "... Writing Results to " << currentFileName << std::endl;
@@ -50,9 +59,30 @@ public:
 		y.resize(totalParticles); vy.resize(totalParticles); ry.resize(totalParticles);
 		z.resize(totalParticles); vz.resize(totalParticles); rz.resize(totalParticles);
 
+		cond.resize(totalParticles);
+
 		px.resize(totalParticles);
 		py.resize(totalParticles);
 		pz.resize(totalParticles);
+
+		xo.resize(totalParticles);
+		yo.resize(totalParticles);
+		zo.resize(totalParticles);
+
+		fxx.resize(totalParticles); fxy.resize(totalParticles); fxz.resize(totalParticles);
+		fyx.resize(totalParticles); fyy.resize(totalParticles); fyz.resize(totalParticles);
+		fzx.resize(totalParticles); fzy.resize(totalParticles); fzz.resize(totalParticles);
+
+		sxx.resize(totalParticles); sxy.resize(totalParticles); sxz.resize(totalParticles);
+		syx.resize(totalParticles); syy.resize(totalParticles); syz.resize(totalParticles);
+		szx.resize(totalParticles); szy.resize(totalParticles); szz.resize(totalParticles);
+
+
+		e1x.resize(totalParticles); e1y.resize(totalParticles); e1z.resize(totalParticles);
+		e2x.resize(totalParticles); e2y.resize(totalParticles); e2z.resize(totalParticles);
+		e3x.resize(totalParticles); e3y.resize(totalParticles); e3z.resize(totalParticles);
+
+		lambdax.resize(totalParticles); lambday.resize(totalParticles); lambdaz.resize(totalParticles);
 
 		isFS.resize(totalParticles);
 		
@@ -101,10 +131,15 @@ public:
 				py[i] = dataType.second->perturb[i - idx][1];
 				pz[i] = dataType.second->perturb[i - idx][2];
 
+				cond[i] = dataType.second->conditionNumber[i - idx];
+
 				ax[i] = dataType.second->acc[i - idx][0];
 				ay[i] = dataType.second->acc[i - idx][1];
 				az[i] = dataType.second->acc[i - idx][2];
 
+				xo[i] = dataType.second->originPos[i - idx][0];
+				yo[i] = dataType.second->originPos[i - idx][1];
+				zo[i] = dataType.second->originPos[i - idx][2];
 
 				nx[i] = dataType.second->normalVec[i - idx][0];
 				ny[i] = dataType.second->normalVec[i - idx][1];
@@ -113,6 +148,47 @@ public:
 				tgx[i] = dataType.second->tempGrad[i - idx][0];
 				tgy[i] = dataType.second->tempGrad[i - idx][1];
 				tgz[i] = dataType.second->tempGrad[i - idx][2];
+
+				fxx[i] = dataType.second->defoGrad[i - idx][0][0];
+				fxy[i] = dataType.second->defoGrad[i - idx][0][1];
+				fxz[i] = dataType.second->defoGrad[i - idx][0][2];
+
+				fyx[i] = dataType.second->defoGrad[i - idx][1][0];
+				fyy[i] = dataType.second->defoGrad[i - idx][1][1];
+				fyz[i] = dataType.second->defoGrad[i - idx][1][2];
+
+				fzx[i] = dataType.second->defoGrad[i - idx][2][0];
+				fzy[i] = dataType.second->defoGrad[i - idx][2][1];
+				fzz[i] = dataType.second->defoGrad[i - idx][2][2];
+
+
+				sxx[i] = dataType.second->secondPKStress[i - idx][0][0];
+				sxy[i] = dataType.second->secondPKStress[i - idx][0][1];
+				sxz[i] = dataType.second->secondPKStress[i - idx][0][2];
+
+				syx[i] = dataType.second->secondPKStress[i - idx][1][0];
+				syy[i] = dataType.second->secondPKStress[i - idx][1][1];
+				syz[i] = dataType.second->secondPKStress[i - idx][1][2];
+
+				szx[i] = dataType.second->secondPKStress[i - idx][2][0];
+				szy[i] = dataType.second->secondPKStress[i - idx][2][1];
+				szz[i] = dataType.second->secondPKStress[i - idx][2][2];
+
+				e1x[i] = dataType.second->stretch_dirs[i - idx][0][0];
+				e1y[i] = dataType.second->stretch_dirs[i - idx][0][1];
+				e1z[i] = dataType.second->stretch_dirs[i - idx][0][2];
+
+				e2x[i] = dataType.second->stretch_dirs[i - idx][1][0];
+				e2y[i] = dataType.second->stretch_dirs[i - idx][1][1];
+				e2z[i] = dataType.second->stretch_dirs[i - idx][1][2];
+
+				e3x[i] = dataType.second->stretch_dirs[i - idx][2][0];
+				e3y[i] = dataType.second->stretch_dirs[i - idx][2][1];
+				e3z[i] = dataType.second->stretch_dirs[i - idx][2][2];
+
+				lambdax[i] = dataType.second->stretch_total[i - idx][0];
+				lambday[i] = dataType.second->stretch_total[i - idx][1];
+				lambdaz[i] = dataType.second->stretch_total[i - idx][2];
 
 				hdot[i] = dataType.second->enthalpydot[i - idx];
 
@@ -152,6 +228,12 @@ public:
 		H5PartWriteDataFloat64(fileWriter,"y",&y[0]);
 		H5PartWriteDataFloat64(fileWriter,"z",&z[0]);
 
+		H5PartWriteDataFloat64(fileWriter,"xo",&xo[0]);
+		H5PartWriteDataFloat64(fileWriter,"yo",&yo[0]);
+		H5PartWriteDataFloat64(fileWriter,"zo",&zo[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"L1_cond",&cond[0]);
+
 		H5PartWriteDataFloat64(fileWriter,"ax",&ax[0]);
 		H5PartWriteDataFloat64(fileWriter,"ay",&ay[0]);
 		H5PartWriteDataFloat64(fileWriter,"az",&az[0]);
@@ -167,6 +249,20 @@ public:
 		H5PartWriteDataFloat64(fileWriter,"vx",&vx[0]);
 		H5PartWriteDataFloat64(fileWriter,"vy",&vy[0]);
 		H5PartWriteDataFloat64(fileWriter,"vz",&vz[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"fxx",&fxx[0]); H5PartWriteDataFloat64(fileWriter,"fxy",&fxy[0]); H5PartWriteDataFloat64(fileWriter,"fxz",&fxz[0]);
+		H5PartWriteDataFloat64(fileWriter,"fyx",&fyx[0]); H5PartWriteDataFloat64(fileWriter,"fyy",&fyy[0]); H5PartWriteDataFloat64(fileWriter,"fyz",&fyz[0]);
+		H5PartWriteDataFloat64(fileWriter,"fzx",&fzx[0]); H5PartWriteDataFloat64(fileWriter,"fzy",&fzy[0]); H5PartWriteDataFloat64(fileWriter,"fzz",&fzz[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"sxx",&sxx[0]); H5PartWriteDataFloat64(fileWriter,"sxy",&sxy[0]); H5PartWriteDataFloat64(fileWriter,"sxz",&sxz[0]);
+		H5PartWriteDataFloat64(fileWriter,"syx",&syx[0]); H5PartWriteDataFloat64(fileWriter,"syy",&syy[0]); H5PartWriteDataFloat64(fileWriter,"syz",&syz[0]);
+		H5PartWriteDataFloat64(fileWriter,"szx",&szx[0]); H5PartWriteDataFloat64(fileWriter,"szy",&szy[0]); H5PartWriteDataFloat64(fileWriter,"szz",&szz[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"e1x",&e1x[0]); H5PartWriteDataFloat64(fileWriter,"e1y",&e1y[0]); H5PartWriteDataFloat64(fileWriter,"e1z",&e1z[0]);
+		H5PartWriteDataFloat64(fileWriter,"e2x",&e2x[0]); H5PartWriteDataFloat64(fileWriter,"e2y",&e2y[0]); H5PartWriteDataFloat64(fileWriter,"e2z",&e2z[0]);
+		H5PartWriteDataFloat64(fileWriter,"e3x",&e3x[0]); H5PartWriteDataFloat64(fileWriter,"e3y",&e3y[0]); H5PartWriteDataFloat64(fileWriter,"e3z",&e3z[0]);
+
+		H5PartWriteDataFloat64(fileWriter,"lambdax",&lambdax[0]); H5PartWriteDataFloat64(fileWriter,"lambday",&lambday[0]); H5PartWriteDataFloat64(fileWriter,"lambdaz",&lambdaz[0]);
 
 		H5PartWriteDataFloat64(fileWriter,"nx",&nx[0]);
 		H5PartWriteDataFloat64(fileWriter,"ny",&ny[0]);

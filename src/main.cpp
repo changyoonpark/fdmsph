@@ -30,7 +30,7 @@ int main ( void ){
 		std::cout << ">>> Operation : SPHSimulation" << std::endl;
 
 		pData["fluid"] = new ParticleAttributes(simDataInput, fluidDataInput);
-		pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
+		// pData["boundary"] = new ParticleAttributes(simDataInput, boundaryDataInput);
 
 		std::cout << ">>> End of Particle Definition." << std::endl;
 
@@ -39,14 +39,14 @@ int main ( void ){
 
 		SPHSolver solver(simDataInput, pData);
 
-		// std::cout << ">>> Writing Initial Configuration (t=0)" << std::endl;
-		// writer.write(pData,simDataInput["smoothingLength"]);
+		std::cout << ">>> Writing Initial Configuration (t=0)" << std::endl;
+		writer.write(pData,simDataInput["smoothingLength"]);
 
 		std::cout << ">>> Timestep start" << std::endl;
 
 			for(int t=0;t<(Uint)simDataInput["steps"];t++){
-
-				solver.addFluidInletParticles(t);
+				
+				if ( (Uint)simDataInput["inletActive"] ) solver.addFluidInletParticles(t);
 				solver.neighborSearch();
 				solver.marchTime(t);
 

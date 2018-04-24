@@ -28,27 +28,58 @@ public:
 	Real3 inletTangent;
 	Real3 inletCenter;
 
+	std::vector<std::vector<std::tuple<std::string,Uint>>> nMap;
 	std::vector<Real>  vol;
+	std::vector<Real>  originVol;
 	std::vector<Real>  particleDensity;
 	std::vector<Real3> particleDensityGrad;
 	std::vector<Real> mass;
 	std::vector<Real3> pos;
+	std::vector<Real3> posBefore;
+	std::vector<Real3> psi;
+	std::vector<Real3> originPos;
 	std::vector<Real3> perturb;
 	std::vector<Real3> shift;
+
 	std::vector<Real3> vel;
+	std::vector<Real3> velBefore;
+
 	std::vector<Real3> acc;
+	std::vector<Real3> accBefore;
+	std::vector<std::array<Real3,4>> vel_k;
+
 	std::vector<Real3> force;
-	std::vector<Real>  dens;
+	std::vector<Real3> bodyForce;
 	std::vector<Real3> densGrad;
+
+	std::vector<Real3x3> dispGrad;
+	std::vector<Real3x3> defoGrad;
+	std::vector<Real3x3> defoGrad_thermal;
+	std::vector<Real3x3> defoGrad_elastic;
+	std::vector<Real3x3> defoGrad_withoutThermal;
+	std::vector<Real3> stretch_total;
+	std::vector<Real3> stretch_elastic;
+	std::vector<Real3> stretch_plastic;
+	std::vector<Real3> stretch_plastic_dot;
+	std::vector<Real3> stretch_plastic_dot_before;
+	std::vector<Real3x3> stretch_dirs;
+	std::vector<Real3x3> stretch_dirs_before;
+
+	std::vector<Real3x3> secondPKStress;
 	std::vector<Real3> normalVec;
 	std::vector<Real>  curvature;
 	std::vector<Real3> tempGrad;
 	std::vector<Real3x3> L;
+	std::vector<Real3x3> L_o;
 	std::vector<Real> conditionNumber;
+	std::vector<Real> conditionNumber2;
 	std::vector<Real3x3> L2;
 
 	std::vector<Real3x3> tau;
 	std::vector<Real3x3> tauDot;
+	std::vector<std::array<Real3x3,4>> tau_k;
+
+
 	std::vector<Real3x3x3> tauGrad;
 	std::vector<Real3x3> velGrad;
 
@@ -56,9 +87,16 @@ public:
 	std::vector<Real>  temp;
 	std::vector<Real>  enthalpy;
 	std::vector<Real>  enthalpydot;
+	std::vector<std::array<Real,4>> enthalpy_k;
+
+	std::vector<Real>  dens;
 	std::vector<Real>  densdot;
+	std::vector<std::array<Real,4>> dens_k;
+
+
 	std::vector<bool>  isSensor;
 	std::vector<bool>  isFS;
+	std::vector<bool>  isSolid;
 	std::vector<Real>  heatSensed;
 	std::vector<Real3> forceSensed;
 	std::vector<std::string> type;
@@ -68,6 +106,8 @@ public:
 	void addParticlesToFluid();
 
 //  This should only work for fluid particles
+	inline Real getBulkModulus(){        return parDataIn["bulkModulus"];}
+	inline Real getShearModulus(){       return parDataIn["shearModulus"];}
 	inline Real getT0(){ 		  		 return parDataIn["T0"];}
 	inline Real3 getv0(){                return Real3{parDataIn["v0"][0],parDataIn["v0"][1],parDataIn["v0"][2]};}
 	inline Real getSpecificHeat(){ 		 return parDataIn["specificHeat"];}

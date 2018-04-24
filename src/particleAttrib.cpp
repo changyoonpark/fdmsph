@@ -76,7 +76,7 @@ std::cout << "... Computing Volume that should be used (2D) " << std::endl;
 	defaultVolume = 1.0 / kernelSum;	
 	defaultMass = defaultVolume * (Real) parDataIn["rho0"];
 
-	std::cout << "... The default volume & mass used for the boundary is v_o = " << defaultVolume << ", m_o = " << defaultMass << std::endl;
+	std::cout << "... The default volume & mass that will be used is v_o = " << defaultVolume << ", m_o = " << defaultMass << std::endl;
 
 	for(auto boundaryEntry : parDataIn["objects"]){
 		int n = 0;
@@ -204,7 +204,7 @@ std::cout << "... Computing Volume that should be used (2D) " << std::endl;
 				for (int k = offset; k <= (int)((y1 - y0)/dx) - offset; k ++ ){
 
 					Real3 posToAdd{x0 + dx * i, y0 + dx * k, 0};
-					addDefaultFluidParticleAtPosition(posToAdd,getT0());
+					addDefaultFluidParticleAtPosition(posToAdd,posToAdd[0]);
 					n+=1;
 
 				}}
@@ -331,7 +331,7 @@ void ParticleAttributes::fluidInit(){
                      	   z0 + dx * (Real)k};
 
 		    posToAdd = add(posToAdd,_perturb);
-			addDefaultFluidParticleAtPosition(posToAdd,getT0());
+			addDefaultFluidParticleAtPosition(posToAdd, posToAdd[0] );
 			n += 1;
 
 		}}}
@@ -352,7 +352,7 @@ void ParticleAttributes::fluidInit(){
 		for(int i = 0; i < pointCloud.size(); i++){
 			std::cout << pointCloud[i] << std::endl;
 			Real3 posToAdd{pointCloud[i]["x"],pointCloud[i]["y"],pointCloud[i]["z"]};
-			addDefaultFluidParticleAtPosition(posToAdd,getT0());			
+			addDefaultFluidParticleAtPosition(posToAdd,posToAdd[0]);			
 			numParticles+=1;
 			n+=1;			
 		}
@@ -385,33 +385,80 @@ void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd){
 
 	mass.push_back(defaultMass);
 	vol.push_back(defaultVolume);
+	originVol.push_back(defaultVolume);
 	particleDensity.push_back(0);
 	particleDensityGrad.push_back(zeroVector);
 	perturb.push_back(zeroVector);
 	shift.push_back(zeroVector);
+
 	pos.push_back(posToAdd);
-	vel.push_back(inletVelocity);
+	// spos_k.push_back(std::array<Real3,4>{zeroVector,zeroVector,zeroVector,zeroVector});
+
+	posBefore.push_back(zeroVector);
+	psi.push_back(zeroVector);
+	originPos.push_back(posToAdd);
+	
+	std::vector<std::tuple<std::string,Uint>> nullMap{};
+	nMap.push_back(nullMap);
+
+	if ( (Uint)simDataIn["inletActive"]){ vel.push_back(inletVelocity); } 
+	else { vel.push_back(zeroVector); }
+	velBefore.push_back(zeroVector);
+
 	acc.push_back(zeroVector);
+	accBefore.push_back(zeroVector);
+	vel_k.push_back(std::array<Real3,4>{zeroVector,zeroVector,zeroVector,zeroVector});
+
 	dens.push_back(getRho0());
 	densdot.push_back(0);
+	dens_k.push_back(std::array<Real,4>{0,0,0,0});
+
 	densGrad.push_back(zeroVector);
 	tempGrad.push_back(zeroVector);
+
+	defoGrad.push_back(zeromat);
+	defoGrad_thermal.push_back(zeromat);
+	defoGrad_elastic.push_back(zeromat);
+	defoGrad_withoutThermal.push_back(zeromat);
+
+	stretch_elastic.push_back(zeroVector);
+	stretch_plastic.push_back(zeroVector);
+	stretch_plastic_before.push_back(zeroVector);
+	stretch_plastic_dot.push_back(zeroVector);
+	stretch_plastic_dot_before.push_back(zeroVector);
+	stretch_total.push_back(zeroVector);
+
+	stretch_dirs.push_back(zeromat);
+	stretch_dirs_before.push_back(zeromat);
+
+	dispGrad.push_back(zeromat);
+	secondPKStress.push_back(zeromat);
 	normalVec.push_back(zeroVector);
 	temp.push_back(getT0());
 	isFS.push_back(false);
+	isSolid.push_back(true);
 	conditionNumber.push_back(0);
+	conditionNumber2.push_back(0);
 	curvature.push_back(0);
+
 	L.push_back(zeromat);
+	L_o.push_back(zeromat);
 	L2.push_back(zeromat);	
 	velGrad.push_back(zeromat);
+
 	tau.push_back(zeromat);
 	tauDot.push_back(zeromat);
+	tau_k.push_back(std::array<Real3x3,4>{zeromat,zeromat,zeromat,zeromat});
+
 	tauGrad.push_back(zeroijk);
 
 	enthalpy.push_back(0);
 	enthalpydot.push_back(0);
+	enthalpy_k.push_back(std::array<Real,4>{0,0,0,0});
+
 	type.push_back("Fluid");
 	force.push_back(zeroVector);
+	bodyForce.push_back(zeroVector);
 	isSensor.push_back(false);
 	heatSensed.push_back(0);
 	forceSensed.push_back(zeroVector);		
@@ -424,23 +471,53 @@ void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd, Real
 
 	mass.push_back(defaultMass);
 	vol.push_back(defaultVolume);
+	originVol.push_back(defaultVolume);
 	particleDensity.push_back(0);
 	particleDensityGrad.push_back(zeroVector);
 	perturb.push_back(zeroVector);
 	shift.push_back(zeroVector);
 	pos.push_back(posToAdd);
-	vel.push_back(inletVelocity);
+	posBefore.push_back(zeroVector);
+	psi.push_back(zeroVector);
+	originPos.push_back(posToAdd);
+
+	std::vector<std::tuple<std::string,Uint>> nullMap{};
+	nMap.push_back(nullMap);
+	if ((Uint)simDataIn["inletActive"]){ vel.push_back(inletVelocity); } 
+	else { vel.push_back(zeroVector); }
+	velBefore.push_back(zeroVector);
 	acc.push_back(zeroVector);
+	accBefore.push_back(zeroVector);
 	dens.push_back(getRho0());
 	densdot.push_back(0);
 	densGrad.push_back(zeroVector);
 	tempGrad.push_back(zeroVector);
+	defoGrad.push_back(zeromat);
+	defoGrad_thermal.push_back(zeromat);
+	defoGrad_elastic.push_back(zeromat);
+	defoGrad_withoutThermal.push_back(zeromat);
+	stretch_elastic.push_back(zeroVector);
+	stretch_plastic.push_back(zeroVector);
+	stretch_plastic_before.push_back(zeroVector);
+	stretch_plastic_dot.push_back(zeroVector);
+	stretch_plastic_dot_before.push_back(zeroVector);
+
+	stretch_total.push_back(zeroVector);
+
+	stretch_dirs.push_back(zeromat);
+	stretch_dirs_before.push_back(zeromat);
+
+	dispGrad.push_back(zeromat);
+	secondPKStress.push_back(zeromat);
 	normalVec.push_back(zeroVector);
 	temp.push_back(temperature);
 	isFS.push_back(false);
+	isSolid.push_back(true);
 	conditionNumber.push_back(0);
+	conditionNumber2.push_back(0);
 	curvature.push_back(0);
 	L.push_back(zeromat);
+	L_o.push_back(zeromat);
 	L2.push_back(zeromat);	
 	velGrad.push_back(zeromat);
 	tau.push_back(zeromat);
@@ -451,6 +528,7 @@ void ParticleAttributes::addDefaultFluidParticleAtPosition(Real3& posToAdd, Real
 	enthalpydot.push_back(0);
 	type.push_back("Fluid");
 	force.push_back(zeroVector);
+	bodyForce.push_back(zeroVector);
 	isSensor.push_back(false);
 	heatSensed.push_back(0);
 	forceSensed.push_back(zeroVector);		
